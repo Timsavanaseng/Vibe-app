@@ -1,0 +1,17 @@
+{
+  "name": "VIBE App",
+  "short_name": "VIBE",
+  "description": "L'expérience lifestyle premium à Compiègne",
+  "start_url": "./vibe_prototype.html",
+  "display": "standalone",
+  "background_color": "#F8F7F4",
+  "theme_color": "#7C3AED",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIBE App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#7C3AED">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <style>
+        :root {
+            --v-bg: #F8F7F4;
+            --v-text: #1A1A1A;
+            --v-card: #FFFFFF;
+            --v-accent: #7C3AED;
+            --v-secondary: #D946EF;
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body.v-dark {
+            --v-bg: #0D0D0D;
+            --v-text: #F8F7F4;
+            --v-card: #1C1C1E;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--v-bg);
+            color: var(--v-text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            position: absolute;
+            inset: 0;
+            background-color: var(--v-bg);
+            display: none;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #map-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Map Pin Pulses */
+        .pulse {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .pulse-available {
+            background: #10B981;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+            animation: pulse-green 2s infinite;
+        }
+
+        .pulse-vibrant {
+            background: #F59E0B;
+            box-shadow: 0 0 0 rgba(245, 158, 11, 0.4);
+            animation: pulse-orange 2s infinite;
+        }
+
+        .pulse-full {
+            background: #EF4444;
+            box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes pulse-orange {
+            0% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(245, 158, 11, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+            }
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        /* Map Info Card */
+        #map-info-card {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            right: 20px;
+            z-index: 1001;
+            display: none;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .scanner-viewfinder {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 48px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .scanner-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #7C3AED;
+            z-index: 2;
+        }
+
+        .corner-tl {
+            top: 0;
+            left: 0;
+            border-right: 0;
+            border-bottom: 0;
+            border-top-left-radius: 40px;
+        }
+
+        .corner-tr {
+            top: 0;
+            right: 0;
+            border-left: 0;
+            border-bottom: 0;
+            border-top-right-radius: 40px;
+            border-color: #D946EF;
+        }
+
+        .corner-bl {
+            bottom: 0;
+            left: 0;
+            border-right: 0;
+            border-top: 0;
+            border-bottom-left-radius: 40px;
+            border-color: #D946EF;
+        }
+
+        .corner-br {
+            bottom: 0;
+            right: 0;
+            border-left: 0;
+            border-top: 0;
+            border-bottom-right-radius: 40px;
+        }
+
+        .scan-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, transparent, #7C3AED, #D946EF, transparent);
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+            z-index: 1;
+            animation: scan-move 2.5s ease-in-out infinite;
+        }
+
+        @keyframes scan-move {
+            0% {
+                top: 0%;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .nav-item-h {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #9CA3AF;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-item-h.active {
+            color: var(--v-accent);
+        }
+
+        .nav-item-h.active .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .card-shadow {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        }
+
+        body.v-dark .card-shadow {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .scroll-snap-x {
+            scroll-snap-type: x mandatory;
+        }
+
+        .snap-start {
+            scroll-snap-align: start;
+        }
+
+        .v-tag {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .v-tag.active {
+            background: #7C3AED !important;
+            color: white !important;
+            border-color: #7C3AED !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        /* Profile Specific Styles */
+        .verified-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #7C3AED;
+            color: white;
+            padding: 4px;
+            border-radius: 50%;
+            border: 4px solid var(--v-bg);
+        }
+
+        .profile-stat-card {
+            background: var(--v-card);
+            border: 1px solid transparent;
+            transition: var(--transition);
+        }
+
+        .v-dark .profile-stat-card {
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .profile-menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background: var(--v-card);
+            border-radius: 24px;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .v-dark .profile-menu-item {
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .profile-menu-item:active {
+            transform: scale(0.98);
+            background: rgba(124, 58, 237, 0.05);
+        }
+
+        /* Detail Page Popups */
+        #generic-popup {
+            position: absolute;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div class="app-container">
+
+        <!-- SCREEN: EXPLORER (Accueil) -->
+        <div id="screen-explorer" class="screen active overflow-y-auto no-scrollbar pb-24">
+            <header class="p-8 flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">À PROXIMITÉ</p>
+                    <h2 class="text-2xl font-800 tracking-tight">Compiègne, FR</h2>
+                </div>
+                <div
+                    class="size-12 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center dark:bg-zinc-800 dark:border-zinc-700">
+                    <span class="material-symbols-outlined text-gray-400">notifications</span>
+                </div>
+            </header>
+
+            <div class="px-8 mb-8">
+                <div
+                    class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-3 dark:bg-zinc-900 dark:border-zinc-800">
+                    <span class="material-symbols-outlined text-gray-400">search</span>
+                    <input type="text" placeholder="Où veux-tu aller ?"
+                        class="bg-transparent border-none outline-none font-medium text-sm flex-1 text-inherit">
+                    <span class="material-symbols-outlined text-gray-400">tune</span>
+                </div>
+            </div>
+
+            <!-- Tendance maintenant -->
+            <div class="px-8 mb-4 flex justify-between items-center">
+                <h3 class="font-800 text-lg">Tendance maintenant</h3>
+                <span onclick="setVibeFilter('all')"
+                    class="text-[#7C3AED] font-bold text-xs uppercase cursor-pointer">Tout voir</span>
+            </div>
+            <div id="tendances-container"
+                class="flex gap-4 overflow-x-auto no-scrollbar -mx-8 px-8 mb-10 scroll-snap-x flex-nowrap">
+                <!-- Injected by JS -->
+            </div>
+
+            <!-- Vibe du moment 🎭 -->
+            <div class="px-8 mb-4">
+                <h3 class="font-800 text-lg mb-4">Vibe du moment 🎭</h3>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-8 px-8 flex-nowrap scroll-snap-x">
+                    <button onclick="setVibeFilter('Rooftop', this)"
+                        class="v-tag px-5 py-2.5 rounded-full bg-indigo-50 text-[#7C3AED] font-bold text-xs whitespace-nowrap border border-indigo-100 dark:bg-zinc-800 dark:border-zinc-700/50 dark:text-zinc-300 snap-start">Rooftop</button>
+                    <button onclick="setVibeFilter('Terrasse', this)"
+                        class="v-tag px-5 py-2.5 rounded-full bg-zinc-50 text-zinc-600 font-bold text-xs whitespace-nowrap border border-zinc-100 dark:bg-zinc-800 dark:border-zinc-700/50 dark:text-zinc-300 snap-start">Terrasse</button>
+                    <button onclick="setVibeFilter('Jazz', this)"
+                        class="v-tag px-5 py-2.5 rounded-full bg-zinc-50 text-zinc-600 font-bold text-xs whitespace-nowrap border border-zinc-100 dark:bg-zinc-800 dark:border-zinc-700/50 dark:text-zinc-300 snap-start">Jazz</button>
+                    <button onclick="setVibeFilter('After-Work', this)"
+                        class="v-tag px-5 py-2.5 rounded-full bg-zinc-50 text-zinc-600 font-bold text-xs whitespace-nowrap border border-zinc-100 dark:bg-zinc-800 dark:border-zinc-700/50 dark:text-zinc-300 snap-start">After-Work</button>
+                    <button onclick="setVibeFilter('Date Night', this)"
+                        class="v-tag px-5 py-2.5 rounded-full bg-zinc-50 text-zinc-600 font-bold text-xs whitespace-nowrap border border-zinc-100 dark:bg-zinc-800 dark:border-zinc-700/50 dark:text-zinc-300 snap-start">Date
+                        Night</button>
+                </div>
+            </div>
+
+            <!-- Près de toi 📍 -->
+            <div class="px-8 mb-10 pt-6">
+                <h3 class="font-800 text-lg mb-6">Près de toi 📍</h3>
+                <div id="near-me-container" class="space-y-4">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <!-- Nouveautés 🆕 -->
+            <div class="px-8 mb-10">
+                <h3 class="font-800 text-lg mb-6">Nouveautés 🆕</h3>
+                <div id="new-container"
+                    class="flex gap-4 overflow-x-auto no-scrollbar -mx-8 px-8 scroll-snap-x flex-nowrap">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: MAP -->
+        <div id="screen-map" class="screen">
+            <div id="map-container"></div>
+            <!-- Overlay Controls -->
+            <div class="absolute top-8 left-8 right-8 z-[1000]">
+                <div
+                    class="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg border border-white/20 flex items-center gap-3 dark:bg-zinc-900/90">
+                    <span class="material-symbols-outlined text-gray-400 ml-2">search</span>
+                    <input type="text" placeholder="Rechercher un lieu..."
+                        class="bg-transparent border-none outline-none font-bold text-sm flex-1 text-inherit">
+                </div>
+            </div>
+
+            <!-- Map Info Card Overlay -->
+            <div id="map-info-card"
+                class="bg-white rounded-[32px] p-3 shadow-2xl border border-gray-100 dark:bg-zinc-900 dark:border-white/10">
+                <div class="flex gap-4">
+                    <img id="map-card-img" src="" class="size-20 rounded-[22px] object-cover">
+                    <div class="flex-1 flex flex-col justify-center">
+                        <div id="map-card-status"
+                            class="text-[9px] font-900 uppercase tracking-widest mb-1 px-2 py-0.5 rounded-full w-fit">
+                        </div>
+                        <h4 id="map-card-name" class="font-800 text-lg leading-tight mb-1"></h4>
+                        <button id="map-card-link"
+                            class="text-[#7C3AED] font-800 text-xs uppercase tracking-widest flex items-center gap-1">
+                            Voir le lieu <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </button>
+                    </div>
+                    <button onclick="hideMapCard()" class="size-8 flex items-center justify-center text-gray-300">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: DETAIL -->
+        <div id="screen-detail" class="screen overflow-y-auto no-scrollbar">
+            <div class="relative h-[420px] shrink-0">
+                <img id="detail-img" src="https://images.pexels.com/photos/67468/pexels-photo-67468.jpeg?w=1200"
+                    class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"></div>
+                <div class="absolute top-12 left-8 right-8 flex justify-between items-center">
+                    <button onclick="navBack()"
+                        class="size-11 rounded-full bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined">arrow_back_ios_new</span>
+                    </button>
+                    <button id="detail-fav-btn"
+                        class="size-11 rounded-full bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined">favorite</span>
+                    </button>
+                </div>
+                <div class="absolute bottom-8 left-8">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span id="detail-status"
+                            class="px-3 py-1 bg-emerald-500 text-white text-[10px] font-800 rounded-full uppercase tracking-widest">Disponible
+                            ●</span>
+                    </div>
+                    <h1 id="detail-name" class="text-4xl font-800 text-white tracking-tighter">L'Art de Vivre</h1>
+                </div>
+            </div>
+
+            <p id="detail-desc" class="text-gray-500 leading-relaxed font-medium mb-10 dark:text-gray-400 text-sm">
+                Une expérience culinaire hors du temps au cœur de Compiègne. Produits locaux, ambiance tamisée et
+                vibe unique.
+            </p>
+
+            <!-- RECRUITMENT BANNER -->
+            <div
+                class="bg-indigo-50 dark:bg-zinc-800/50 p-6 rounded-[32px] mb-6 flex items-center justify-between border border-indigo-100 dark:border-white/5">
+                <div>
+                    <p class="text-[10px] font-900 uppercase tracking-widest text-[#7C3AED] mb-1">Recrutement</p>
+                    <p class="text-sm font-800 leading-tight">Vous aimez l'ambiance ?<br>Rejoignez l'équipe ! 👋</p>
+                </div>
+                <button onclick="showJobsPopup()"
+                    class="bg-[#7C3AED] text-white px-4 py-2.5 rounded-xl font-900 text-[10px] uppercase tracking-wider active:scale-95 transition-transform shadow-lg shadow-indigo-500/20">
+                    Voir les postes
+                </button>
+            </div>
+            <div class="flex flex-col gap-4">
+                <button onclick="showPopup('Votre table est réservée ! 📅')"
+                    class="w-full bg-[#7C3AED] text-white font-800 py-5 rounded-2xl shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined">calendar_month</span> Réserver une table 📅
+                </button>
+                <button onclick="showPopup('Menu chargé avec succès ! 📱')"
+                    class="w-full bg-[#D946EF] text-white font-800 py-5 rounded-2xl shadow-xl shadow-fuchsia-500/30 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined">qr_code_2</span> Voir la carte QR 📱
+                </button>
+                <button onclick="navTo('scanner')"
+                    class="w-full border-2 border-gray-100 dark:border-white/10 text-inherit font-800 py-4 rounded-2xl flex items-center justify-center gap-2 mt-2">
+                    <span class="material-symbols-outlined">qr_code_scanner</span> Scanner pour commander
+                </button>
+            </div>
+
+            <!-- REVIEWS SECTION -->
+            <div class="mt-12 pt-12 border-t border-gray-100 dark:border-white/5">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h3 class="text-2xl font-800 tracking-tight mb-1">Avis clients</h3>
+                        <div class="flex items-center gap-2">
+                            <div class="flex text-amber-400">
+                                <span class="material-symbols-outlined text-[18px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[18px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[18px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[18px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[18px] fill-0.5">star_half</span>
+                            </div>
+                            <span class="font-900 text-sm">4.8</span>
+                            <span class="text-gray-400 text-xs font-bold">(128 avis)</span>
+                        </div>
+                    </div>
+                    <button onclick="showReviewPopup()"
+                        class="text-[#7C3AED] font-900 text-xs uppercase tracking-widest border-b-2 border-[#7C3AED] pb-1">
+                        Laisser un avis
+                    </button>
+                </div>
+
+                <!-- Dummy Reviews -->
+                <div class="space-y-6">
+                    <div class="bg-gray-50 dark:bg-zinc-900/50 p-5 rounded-[28px]">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="size-8 bg-indigo-100 rounded-full flex items-center justify-center font-900 text-[#7C3AED] text-[10px]">
+                                    ML</div>
+                                <span class="font-800 text-sm">Marie-Laure</span>
+                            </div>
+                            <div class="flex text-amber-400">
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 font-medium leading-relaxed dark:text-gray-400">
+                            L'ambiance est incroyable, surtout le soir avec les lumières tamisées. Le service est aux
+                            petits oignons !
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-50 dark:bg-zinc-900/50 p-5 rounded-[28px]">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="size-8 bg-fuchsia-100 rounded-full flex items-center justify-center font-900 text-[#D946EF] text-[10px]">
+                                    JD</div>
+                                <span class="font-800 text-sm">Julien D.</span>
+                            </div>
+                            <div class="flex text-amber-400">
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                                <span class="material-symbols-outlined text-[14px] fill-0">star</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 font-medium leading-relaxed dark:text-gray-400">
+                            Superbe lieu, très bien décoré. Un peu bruyant le samedi soir mais ça fait partie du charme.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div id="screen-scanner" class="screen items-center p-8 bg-black">
+        <header class="w-full flex justify-between items-center mb-12 mt-12">
+            <button onclick="navBack()"
+                class="size-11 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div class="text-white text-center flex-1 pr-11">
+                <h2 class="text-xl font-800 tracking-tight">Scanner QR</h2>
+            </div>
+        </header>
+
+        <div class="text-center mb-10 text-white/70">
+            <p class="font-medium">Scanne le QR code sur ta table</p>
+        </div>
+
+        <div class="scanner-viewfinder flex items-center justify-center mb-12">
+            <div class="scanner-corner corner-tl"></div>
+            <div class="scanner-corner corner-tr"></div>
+            <div class="scanner-corner corner-bl"></div>
+            <div class="scanner-corner corner-br"></div>
+            <div class="scan-line"></div>
+            <img onclick="navTo('menu')" src="https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?w=400"
+                class="w-full h-full object-cover grayscale opacity-20 scale-110 cursor-pointer">
+        </div>
+
+        <button onclick="showManualCodePopup()"
+            class="text-white/50 font-800 text-xs uppercase tracking-widest hover:text-white transition-colors">
+            Entrer un code manuellement
+        </button>
+
+        <div class="mt-auto w-full flex justify-between gap-4 pb-12">
+            <button onclick="showGalleryPopup()"
+                class="flex-1 bg-white/5 border border-white/10 py-5 rounded-3xl flex flex-col items-center gap-2 text-white/70 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined">image</span>
+                <span class="text-[10px] font-900 uppercase tracking-widest">Galerie</span>
+            </button>
+            <button onclick="navTo('scanner')"
+                class="flex-1 bg-[#7C3AED] py-5 rounded-3xl flex flex-col items-center gap-2 text-white shadow-lg shadow-indigo-500/20">
+                <span class="material-symbols-outlined">qr_code_scanner</span>
+                <span class="text-[10px] font-900 uppercase tracking-widest">Scanner</span>
+            </button>
+            <button onclick="showHistoryPopup()"
+                class="flex-1 bg-white/5 border border-white/10 py-5 rounded-3xl flex flex-col items-center gap-2 text-white/70 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined">history</span>
+                <span class="text-[10px] font-900 uppercase tracking-widest">Historique</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN: MENU -->
+    <div id="screen-menu" class="screen overflow-hidden">
+        <!-- STICKY HEADER OVERHAUL (4 LINES) -->
+        <div
+            class="sticky top-0 z-50 bg-white dark:bg-black/95 flex flex-col pt-4 shrink-0 border-b border-gray-100 dark:border-white/5">
+            <!-- Line 1: Nav -->
+            <div class="flex items-center justify-between px-8 mb-4">
+                <button onclick="navBack()"
+                    class="size-10 rounded-full bg-gray-100 flex items-center justify-center dark:bg-zinc-800 text-gray-400">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <h1 class="text-sm font-900 tracking-tight text-inherit uppercase">Le Menu</h1>
+                <div class="size-10 rounded-full bg-indigo-50 flex items-center justify-center dark:bg-zinc-800">
+                    <span class="material-symbols-outlined text-[#7C3AED] text-[20px]">shopping_basket</span>
+                </div>
+            </div>
+
+            <!-- Line 2: Categories (JS Injected) -->
+            <div id="menu-categories" class="flex gap-2 overflow-x-auto no-scrollbar px-6 pb-4">
+                <!-- Injected by JS -->
+            </div>
+
+            <!-- Line 3: Languages (Text Codes) -->
+            <div id="lang-selector" class="flex gap-6 justify-center pb-4">
+                <button onclick="setLang('fr')" class="lang-btn text-[11px] font-900 transition-all"
+                    data-lang="fr">FR</button>
+                <button onclick="setLang('en')" class="lang-btn text-[11px] font-900 transition-all"
+                    data-lang="en">GB</button>
+                <button onclick="setLang('de')" class="lang-btn text-[11px] font-900 transition-all"
+                    data-lang="de">DE</button>
+                <button onclick="setLang('es')" class="lang-btn text-[11px] font-900 transition-all"
+                    data-lang="es">ES</button>
+                <button onclick="setLang('zh')" class="lang-btn text-[11px] font-900 transition-all"
+                    data-lang="zh">CN</button>
+            </div>
+
+            <!-- Line 4: Allergens (JS Injected styling) -->
+            <div id="allergen-filters" class="flex gap-2 overflow-x-auto no-scrollbar px-8 pb-4">
+                <button onclick="toggleAllergen('Gluten')"
+                    class="allergen-btn flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2A2A2A] text-white text-[9px] font-800 transition-all active:scale-95 whitespace-nowrap"
+                    data-allergen="Gluten">
+                    <span class="material-symbols-outlined text-[14px]">bakery_dining</span> Gluten
+                </button>
+                <button onclick="toggleAllergen('Lactose')"
+                    class="allergen-btn flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2A2A2A] text-white text-[9px] font-800 transition-all active:scale-95 whitespace-nowrap"
+                    data-allergen="Lactose">
+                    <span class="material-symbols-outlined text-[14px]">egg_alt</span> Lactose
+                </button>
+                <button onclick="toggleAllergen('Noix')"
+                    class="allergen-btn flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2A2A2A] text-white text-[9px] font-800 transition-all active:scale-95 whitespace-nowrap"
+                    data-allergen="Noix">
+                    <span class="material-symbols-outlined text-[14px]">nutrition</span> Noix
+                </button>
+                <button onclick="toggleAllergen('Oeufs')"
+                    class="allergen-btn flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2A2A2A] text-white text-[9px] font-800 transition-all active:scale-95 whitespace-nowrap"
+                    data-allergen="Oeufs">
+                    <span class="material-symbols-outlined text-[14px]">egg</span> Oeufs
+                </button>
+                <button onclick="toggleAllergen('Végétarien')"
+                    class="allergen-btn flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2A2A2A] text-white text-[9px] font-800 transition-all active:scale-95 whitespace-nowrap"
+                    data-allergen="Végétarien">
+                    <span class="material-symbols-outlined text-[14px]">leafy_green</span> Veg
+                </button>
+                <button onclick="toggleAllergen('Vegan')"
+                    class="allergen-btn flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2A2A2A] text-white text-[9px] font-800 transition-all active:scale-95 whitespace-nowrap"
+                    data-allergen="Vegan">
+                    <span class="material-symbols-outlined text-[14px]">eco</span> Vegan
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu Items (Scrollable Area) -->
+        <div id="menu-items-container" class="flex-1 overflow-y-auto no-scrollbar px-8 py-8 space-y-8 pb-40">
+            <!-- Injected by JS -->
+        </div>
+
+        <!-- FLOATING SERVICE BUTTONS -->
+        <div class="absolute bottom-4 left-0 right-0 px-6 flex flex-col gap-3 z-40 pointer-events-none">
+            <!-- Cart Bar (Floating Summary) -->
+            <div id="cart-bar" onclick="navTo('cart')"
+                class="pointer-events-auto bg-[#7C3AED] text-white p-4 rounded-2xl flex items-center justify-between shadow-2xl cursor-pointer mb-2"
+                style="display: none;">
+                <div class="flex items-center gap-3">
+                    <div class="size-8 bg-white/20 rounded-xl flex items-center justify-center">
+                        <span id="cart-count" class="font-900 text-sm">0</span>
+                    </div>
+                    <span class="font-800 text-sm">Voir le panier</span>
+                </div>
+                <span id="cart-total" class="font-900 text-lg">0.00€</span>
+            </div>
+
+            <div class="flex flex-col gap-2 pointer-events-auto">
+                <button onclick="callWaiter()"
+                    class="w-full bg-[#7C3AED] text-white py-4 rounded-2xl font-800 shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-3 active:scale-95 transition-transform text-sm">
+                    Appeler un serveur 🔔
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="showBillPopup()"
+                        class="flex-1 bg-[#7C3AED] text-white py-4 rounded-2xl font-800 shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 active:scale-95 transition-transform text-xs">
+                        Payer l'addition 💳
+                    </button>
+                    <button onclick="showSplitBill()"
+                        class="flex-1 bg-white dark:bg-zinc-800 text-[#7C3AED] border-2 border-[#7C3AED] py-4 rounded-2xl font-800 shadow-lg shadow-indigo-500/10 flex items-center justify-center gap-2 active:scale-95 transition-transform text-xs">
+                        Diviser l'addition
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN: CART (Order Summary) -->
+    <div id="screen-cart" class="screen overflow-hidden bg-white dark:bg-black pb-28">
+        <header
+            class="px-8 flex items-center justify-between py-5 shrink-0 border-b border-gray-100 dark:border-white/5">
+            <button onclick="navTo('menu')"
+                class="flex items-center gap-1 text-[#7C3AED] font-800 text-sm active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                Retour
+            </button>
+            <div class="flex flex-col items-center">
+                <h1 class="text-sm font-900 tracking-tight text-[#F8F7F4] uppercase">Mon Panier 🛍️</h1>
+            </div>
+            <div class="size-10"></div>
+        </header>
+
+        <div id="cart-items-list" class="flex-1 overflow-y-auto no-scrollbar px-6 py-4 space-y-3">
+            <!-- Injected by JS -->
+        </div>
+
+        <div class="p-6 bg-gray-50 dark:bg-zinc-900/50 rounded-t-[40px] shadow-2xl space-y-4 shrink-0">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-gray-400 font-800 text-[11px] uppercase tracking-wider">Total de la
+                    commande</span>
+                <span id="cart-summary-total" class="font-900 text-2xl text-[#7C3AED]">0.00€</span>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="showBillPopup()"
+                    class="w-full bg-[#7C3AED] text-white py-4 rounded-2xl font-800 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-3 active:scale-95 transition-transform border-2 border-transparent text-sm">
+                    Payer en entier 💳
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="showSplitBill()"
+                        class="flex-1 bg-white dark:bg-zinc-800 text-[#7C3AED] border-2 border-[#7C3AED] py-3.5 rounded-xl font-800 flex items-center justify-center gap-2 active:scale-95 transition-transform text-[10px]">
+                        <span class="material-symbols-outlined text-[16px]">groups</span> Diviser 👥
+                    </button>
+                    <button onclick="callWaiter()"
+                        class="flex-1 bg-gray-100 dark:bg-zinc-800 text-gray-400 py-3.5 rounded-xl font-800 flex items-center justify-center gap-2 active:scale-95 transition-transform text-[10px]">
+                        <span class="material-symbols-outlined text-[16px]">notifications</span> Serveur 🔔
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- SCREEN: MENU DETAIL POPUP (Immersive) -->
+    <div id="menu-detail-popup"
+        class="fixed inset-0 z-[3000] bg-black hidden flex-col overflow-y-auto no-scrollbar transform translate-y-full transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)">
+        <div class="relative h-[60vh] shrink-0">
+            <img id="menu-popup-img" src="" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+            <button onclick="closeMenuPopup()"
+                class="absolute top-12 left-8 size-11 rounded-full bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="bg-black text-white p-8 -mt-12 rounded-t-[48px] flex-1 relative z-10">
+            <div id="menu-popup-badge" class="mb-4"></div>
+            <div class="flex justify-between items-start mb-6">
+                <h2 id="menu-popup-name" class="text-3xl font-800 tracking-tighter leading-tight"></h2>
+                <span id="menu-popup-price" class="text-2xl font-800 text-[#D946EF]"></span>
+            </div>
+            <p id="menu-popup-desc" class="text-white/60 leading-relaxed font-medium mb-8"></p>
+
+            <div class="mb-10">
+                <h4 class="text-[10px] font-900 uppercase tracking-widest text-white/40 mb-3">Allergènes</h4>
+                <div id="menu-popup-allergens" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <button onclick="closeMenuPopup(); showPopup('Ajouté au panier ! 🛍️')"
+                class="w-full bg-[#7C3AED] text-white font-800 py-5 rounded-3xl shadow-2xl shadow-indigo-500/40 flex items-center justify-center gap-3 active:scale-95 transition-transform mt-auto">
+                <span class="material-symbols-outlined">add_shopping_cart</span>
+                Ajouter au panier
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN: FAVORITES -->
+    <div id="screen-favorites" class="screen overflow-y-auto no-scrollbar pb-24">
+        <header class="p-8 pb-4">
+            <h1 class="text-3xl font-800 tracking-tight">Mes Favoris ❤️</h1>
+        </header>
+        <div id="fav-list-container" class="px-8 flex-1 flex flex-col">
+            <!-- Injected by JS -->
+        </div>
+    </div>
+
+    <!-- SCREEN: PROFILE -->
+    <div id="screen-profile" class="screen overflow-y-auto no-scrollbar pb-32">
+        <div class="p-8 pt-12 flex flex-col items-center">
+            <!-- Avatar Section -->
+            <div class="relative mb-6">
+                <div class="size-28 rounded-full border-4 border-white shadow-2xl overflow-hidden dark:border-zinc-800">
+                    <img src="https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=400"
+                        class="w-full h-full object-cover">
+                </div>
+                <div class="verified-badge">
+                    <span class="material-symbols-outlined text-[16px] font-bold">verified</span>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-800 tracking-tight">Sitthy Le boss</h2>
+            <p class="text-gray-400 font-bold text-[10px] tracking-widest mt-1 uppercase">Compiègne, FR</p>
+
+            <!-- Membership Badge -->
+            <div
+                class="mt-4 px-4 py-1.5 bg-indigo-50 text-[#7C3AED] rounded-full flex items-center gap-2 border border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20">
+                <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+                <span class="text-[10px] font-900 uppercase tracking-widest">Membre Vibe Gold</span>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="grid grid-cols-2 gap-4 w-full mt-10">
+                <div class="profile-stat-card p-5 rounded-[32px] card-shadow text-center">
+                    <p class="text-2xl font-800">12</p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Lieux visités</p>
+                </div>
+                <div class="profile-stat-card p-5 rounded-[32px] card-shadow text-center">
+                    <p class="text-2xl font-800">8</p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Avis publiés</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Menu -->
+        <div class="px-8 space-y-3">
+            <div onclick="showLanguagePopup()" class="profile-menu-item card-shadow cursor-pointer">
+                <div class="flex items-center gap-4">
+                    <div class="size-10 bg-gray-50 rounded-2xl flex items-center justify-center dark:bg-zinc-800">
+                        <span class="material-symbols-outlined text-gray-400">language</span>
+                    </div>
+                    <span class="font-800 text-sm">Langue</span>
+                </div>
+                <span class="text-gray-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">Français
+                    <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+                </span>
+            </div>
+
+            <div onclick="showNotificationPopup()" class="profile-menu-item card-shadow cursor-pointer">
+                <div class="flex items-center gap-4">
+                    <div class="size-10 bg-gray-50 rounded-2xl flex items-center justify-center dark:bg-zinc-800">
+                        <span class="material-symbols-outlined text-gray-400">notifications</span>
+                    </div>
+                    <span class="font-800 text-sm">Notifications</span>
+                </div>
+                <div class="w-10 h-5 bg-emerald-500 rounded-full relative">
+                    <div class="absolute right-0.5 top-0.5 size-4 bg-white rounded-full"></div>
+                </div>
+            </div>
+
+            <div onclick="showReviewsPopup()" class="profile-menu-item card-shadow cursor-pointer">
+                <div class="flex items-center gap-4">
+                    <div class="size-10 bg-gray-50 rounded-2xl flex items-center justify-center dark:bg-zinc-800">
+                        <span class="material-symbols-outlined text-gray-400">rate_review</span>
+                    </div>
+                    <span class="font-800 text-sm">Mes avis</span>
+                </div>
+                <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+            </div>
+
+            <div onclick="showReferralPopup()" class="profile-menu-item card-shadow cursor-pointer">
+                <div class="flex items-center gap-4">
+                    <div class="size-10 bg-gray-50 rounded-2xl flex items-center justify-center dark:bg-zinc-800">
+                        <span class="material-symbols-outlined text-gray-400">card_giftcard</span>
+                    </div>
+                    <span class="font-800 text-sm">Parrainage</span>
+                </div>
+                <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+            </div>
+
+            <div onclick="showLogoutPopup()"
+                class="profile-menu-item card-shadow mt-6 text-rose-500 !bg-rose-50 border-rose-100 dark:!bg-rose-500/10 dark:!border-rose-500/20 cursor-pointer">
+                <div class="flex items-center gap-4">
+                    <div class="size-10 bg-white rounded-2xl flex items-center justify-center dark:bg-rose-500/20">
+                        <span class="material-symbols-outlined">logout</span>
+                    </div>
+                    <span class="font-800 text-sm">Déconnexion</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav id="bottom-nav"
+        class="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex justify-around items-center z-50 dark:bg-black/80 dark:border-white/5">
+        <div onclick="navTo('explorer')" class="nav-item-h" id="nav-explorer">
+            <span class="material-symbols-outlined">explore</span>
+        </div>
+        <div onclick="navTo('map')" class="nav-item-h" id="nav-map">
+            <span class="material-symbols-outlined">map</span>
+        </div>
+        <div onclick="navTo('scanner')"
+            class="size-14 rounded-full bg-[#7C3AED] flex items-center justify-center text-white -mt-12 border-4 border-[#F8F7F4] shadow-lg shadow-indigo-500/40 dark:border-black active:scale-95 transition-transform">
+            <span class="material-symbols-outlined text-[32px]">qr_code_scanner</span>
+        </div>
+        <div onclick="navTo('favorites')" class="nav-item-h" id="nav-favorites">
+            <span class="material-symbols-outlined">favorite</span>
+        </div>
+        <div onclick="navTo('profile')" class="nav-item-h" id="nav-profile">
+            <span class="material-symbols-outlined">person</span>
+        </div>
+    </nav>
+
+    <div id="generic-popup" onclick="closePopup()">
+        <div id="popup-content-container"
+            class="bg-white rounded-[40px] p-8 w-full max-w-[320px] dark:bg-zinc-900 animate-in fade-in zoom-in duration-300 text-center text-[#1A1A1A] dark:text-[#F8F7F4]"
+            onclick="event.stopPropagation()">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+    </div>
+
+    <script>
+        let map;
+        let isDarkMode = false;
+        let historyStack = ['explorer'];
+        let currentScreen = 'explorer';
+        let currentVibe = 'all';
+        let favoriteIds = [];
+
+        // PWA & Installation
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Delay show by 3s to let the user see the UI first
+            setTimeout(showInstallPopup, 3000);
+        });
+
+        function showInstallPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-indigo-500/10">
+                    <span class="material-symbols-outlined text-[32px]">install_mobile</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-2">Installe VIBE !</h2>
+                <p class="text-[11px] font-bold opacity-60 mb-8">Ajoute VIBE sur ton écran d'accueil pour une expérience fluide et hors ligne. ✨</p>
+                
+                <button onclick="handleInstallAction()" class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform mb-3">
+                    Installer maintenant
+                </button>
+                <button onclick="closePopup()" class="w-full py-4 text-gray-400 font-800 text-sm">Plus tard</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function handleInstallAction() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                    closePopup();
+                });
+            } else {
+                showPopup("L'installation est désormais possible via le menu de ton navigateur ! 📱");
+            }
+        }
+        let currentDetailId = null;
+
+        const venues = [
+            { id: 1, name: "Le Coq d'Or", vibes: ["Terrasse", "Brasserie"], status: "vibrant", statusLabel: "Animé", type: "Bar Brasserie", cuisine: "Traditionnel", dist: "100m", img: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=400", badge: "bg-orange-500", bgColor: "bg-orange-500", pos: [49.4170, 2.8256] },
+            { id: 2, name: "Underground", vibes: ["After-Work", "Cocktails"], status: "full", statusLabel: "Complet", type: "Bar à cocktails", cuisine: "Mixologie", dist: "150m", img: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=400", badge: "bg-rose-500", bgColor: "bg-rose-500", pos: [49.4172, 2.8260] },
+            { id: 3, name: "Délirium Café", vibes: ["After-Work", "Bar à bières"], status: "vibrant", statusLabel: "Animé", type: "Bar à bières", cuisine: "Pub", dist: "350m", img: "https://images.unsplash.com/photo-1536489885071-87983c3e2859?auto=format&fit=crop&w=400", badge: "bg-orange-500", bgColor: "bg-orange-500", pos: [49.4180, 2.8228] },
+            { id: 4, name: "In Vino", vibes: ["Date Night", "Vin"], status: "available", statusLabel: "Disponible", type: "Bar à vin", cuisine: "Vignoble", dist: "400m", img: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=400", badge: "bg-emerald-500", bgColor: "bg-emerald-500", pos: [49.4175, 2.8215] },
+            { id: 5, name: "Red Bear", vibes: ["After-Work", "Bar américain"], status: "vibrant", statusLabel: "Animé", type: "Bar américain", cuisine: "Pub", dist: "200m", img: "https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=400", badge: "bg-orange-500", bgColor: "bg-orange-500", pos: [49.4182, 2.8248] },
+            { id: 6, name: "Le Bistrot des Arts", vibes: ["Terrasse", "Bistrot"], status: "available", statusLabel: "Disponible", type: "Bistrot", cuisine: "Français", dist: "600m", img: "https://images.unsplash.com/photo-1550966842-3079559b1740?auto=format&fit=crop&w=400", badge: "bg-emerald-500", bgColor: "bg-emerald-500", pos: [49.4162, 2.8305] },
+            { id: 7, name: "Rhizome", vibes: ["Bistronomique", "Date Night"], status: "full", statusLabel: "Complet", type: "Bistronomique", cuisine: "Moderne", dist: "120m", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=400", badge: "bg-rose-500", bgColor: "bg-rose-500", pos: [49.4178, 2.8252] },
+            { id: 8, name: "Le Bouchon", vibes: ["Terroir", "Local"], status: "available", statusLabel: "Disponible", type: "Terroir", cuisine: "Régional", dist: "250m", img: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=400", badge: "bg-emerald-500", bgColor: "bg-emerald-500", pos: [49.4168, 2.8275] },
+            { id: 9, name: "Bistrot du Terroir", vibes: ["Local", "Traditionnel"], status: "vibrant", statusLabel: "Animé", type: "Local", cuisine: "Fait Maison", dist: "180m", img: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=400", badge: "bg-orange-500", bgColor: "bg-orange-500", pos: [49.4175, 2.8245] },
+            { id: 10, name: "La Table d'Elisa", vibes: ["Élégant", "Gare"], status: "available", statusLabel: "Disponible", type: "Élégant", cuisine: "Gourmet", dist: "900m", img: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=400", badge: "bg-emerald-500", bgColor: "bg-emerald-500", pos: [49.4215, 2.8210] }
+        ];
+
+        const menuData = {
+            "Entrées": {
+                icon: "restaurant_menu",
+                translations: { fr: "Entrées", en: "Appetizers", de: "Vorspeisen", es: "Entrantes", zh: "前菜" },
+                items: [
+                    {
+                        id: 101,
+                        price: "12€",
+                        image: "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=400",
+                        tab: "Entrées",
+                        allergens: ["Lactose", "Noix"],
+                        dietary: ["Végétarien"],
+                        translations: {
+                            fr: { name: "Burrata des Pouilles", shortDesc: "Tomates cerises, pesto, pignons", longDesc: "Une authentique burrata crémeuse de 125g, accompagnée de ses tomates cerises grappes marinées, pesto de basilic frais et pignons de pin torréfiés.", badge: "Chef recommande ⭐" },
+                            en: { name: "Pugliese Burrata", shortDesc: "Cherry tomatoes, pesto, pine nuts", longDesc: "An authentic creamy 125g burrata, served with marinated cherry tomatoes, fresh basil pesto and toasted pine nuts.", badge: "Chef Recommends ⭐" },
+                            de: { name: "Burrata aus Apulien", shortDesc: "Kirschtomaten, Pesto, Pinienkerne", longDesc: "Eine authentische cremige 125g Burrata, serviert mit marinierten Kirschtomaten, frischem Basilikumpesto und gerösteten Pinienkernen.", badge: "Chef empfiehlt ⭐" },
+                            es: { name: "Burrata de Puglia", shortDesc: "Tomates cherry, pesto, piñones", longDesc: "Una auténtica burrata cremosa de 125g, acompañada de tomates cherry marinados, pesto de albahaca fresca y piñones tostados.", badge: "Chef recomienda ⭐" },
+                            zh: { name: "普利亚布拉塔奶酪", shortDesc: "樱桃番茄，香蒜酱，松子", longDesc: "正宗 125 克奶油布拉塔奶酪，配以腌制樱桃番茄、新鲜罗勒香蒜酱和烤松子。", badge: "主厨推荐 ⭐" }
+                        }
+                    },
+                    {
+                        id: 102,
+                        price: "14€",
+                        image: "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=400",
+                        tab: "Entrées",
+                        allergens: ["Lactose"],
+                        dietary: [],
+                        translations: {
+                            fr: { name: "Carpaccio de Bœuf", shortDesc: "Parmesan, roquette, câpres", longDesc: "Fines tranches de bœuf charolais, copeaux de parmesan affiné 24 mois, roquette fraîche et câpres siciliennes.", badge: "" },
+                            en: { name: "Beef Carpaccio", shortDesc: "Parmesan, arugula, capers", longDesc: "Thin slices of Charolais beef, 24-month aged parmesan shavings, fresh arugula and Sicilian capers.", badge: "" },
+                            de: { name: "Rinder-Carpaccio", shortDesc: "Parmesan, Rucola, Kapern", longDesc: "Hauchdünne Scheiben vom Charolais-Rind, 24 Monate gereifte Parmesanspäne, frischer Rucola und sizilianische Kapern.", badge: "" },
+                            es: { name: "Carpaccio de Ternera", shortDesc: "Parmesano, rúcula, alcaparras", longDesc: "Finas láminas de ternera Charolais, virutas de parmesano envejecido 24 meses, rúcula fresca y alcaparras sicilianas.", badge: "" },
+                            zh: { name: "生牛肉片", shortDesc: "帕尔马干酪，芝麻菜，刺山柑", longDesc: "切成薄片的夏洛莱牛肉，配以熟成 24 个月的帕尔马干酪丝、新鲜芝麻菜和西西里刺山柑。", badge: "" }
+                        }
+                    },
+                    {
+                        id: 103,
+                        price: "15€",
+                        image: "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=400",
+                        tab: "Entrées",
+                        allergens: ["Gluten"],
+                        dietary: [],
+                        translations: {
+                            fr: { name: "Gambas Croustillantes", shortDesc: "Panko, sauce sweet chili", longDesc: "Gambas géantes frites en tempura panko ultra-croustillante, servies avec une sauce dip pimentée douce.", badge: "Best Seller 🔥" },
+                            en: { name: "Crispy Prawns", shortDesc: "Panko, sweet chili sauce", longDesc: "Giant prawns fried in ultra-crispy panko tempura, served with a mild spicy dipping sauce.", badge: "Best Seller 🔥" },
+                            de: { name: "Knusprige Garnelen", shortDesc: "Panko, Sweet Chili Sauce", longDesc: "Riesengarnelen in ultra-knusprigem Panko-Tempura frittiert, serviert mit einer milden würzigen Dip-Sauce.", badge: "Bestseller 🔥" },
+                            es: { name: "Gambas Crujientes", shortDesc: "Panko, salsa chili dulce", longDesc: "Gambas gigantes fritas en tempura panko ultra crujiente, servidas con una salsa de chile dulce.", badge: "Más Vendido 🔥" },
+                            zh: { name: "脆皮大虾", shortDesc: "面包糠，甜辣酱", longDesc: "特大虾裹上超脆面包糠炸至金黄，配以温和的甜辣蘸酱。", badge: "热卖商品 🔥" }
+                        }
+                    }
+                ]
+            },
+            "Plats": {
+                icon: "lunch_dining",
+                translations: { fr: "Plats", en: "Mains", de: "Hauptgerichte", es: "Platos", zh: "主食" },
+                items: [
+                    {
+                        id: 201,
+                        price: "19€",
+                        image: "https://images.pexels.com/photos/769289/pexels-photo-769289.jpeg?w=400",
+                        tab: "Plats",
+                        allergens: ["Gluten", "Lactose"],
+                        dietary: [],
+                        translations: {
+                            fr: { name: "Le Burger Signature", shortDesc: "Bœuf, cheddar, oignons confits", longDesc: "Buns briochés artisanal, steak de bœuf frais 180g, cheddar affiné, oignons rouges confits au miel et sauce maison secrète.", badge: "Best Seller 🔥" },
+                            en: { name: "Signature Burger", shortDesc: "Beef, cheddar, candied onions", longDesc: "Artisanal brioche buns, fresh 180g beef steak, aged cheddar, red onions candied with honey and secret house sauce.", badge: "Best Seller 🔥" },
+                            de: { name: "Signatur Burger", shortDesc: "Rind, Cheddar, kandierte Zwiebeln", longDesc: "Handwerklich hergestellte Brioche-Brötchen, frisches 180g Rindersteak, gereifter Cheddar, mit Honig kandierte rote Zwiebeln und geheime Haussauce.", badge: "Bestseller 🔥" },
+                            es: { name: "Hamburguesa Signature", shortDesc: "Ternera, cheddar, cebolla confitada", longDesc: "Pan de brioche artesanal, filete de ternera fresca de 180g, queso cheddar envejecido, cebollas rojas confitadas con miel y salsa secreta de la casa.", badge: "Más Vendido 🔥" },
+                            zh: { name: "招牌汉堡", shortDesc: "牛肉，切达干酪，糖渍洋葱", longDesc: "手工布里欧修面包，180克新鲜牛肉饼，熟成切达干酪，蜂蜜糖渍红洋葱和秘制酱汁。", badge: "热卖商品 🔥" }
+                        }
+                    },
+                    {
+                        id: 202,
+                        price: "24€",
+                        image: "https://images.pexels.com/photos/769289/pexels-photo-769289.jpeg?w=400",
+                        tab: "Plats",
+                        allergens: ["Lactose"],
+                        dietary: ["Végétarien"],
+                        translations: {
+                            fr: { name: "Risotto aux Gambas", shortDesc: "Safran, asperges, citronnelle", longDesc: "Riz Arborio fondant safrané, gambas grillées à la citronnelle, pointes d'asperges vertes et tuile de parmesan.", badge: "Chef recommande ⭐" },
+                            en: { name: "Prawn Risotto", shortDesc: "Saffron, asparagus, lemongrass", longDesc: "Soft saffron Arborio rice, lemongrass grilled prawns, green asparagus tips and parmesan tuile.", badge: "Chef Recommends ⭐" },
+                            de: { name: "Garnelen-Risotto", shortDesc: "Safran, Spargel, Zitronengras", longDesc: "Zarter Safran-Arborio-Reis, in Zitronengras gegrillte Garnelen, grüne Spargelspitzen und Parmesantuile.", badge: "Chef empfiehlt ⭐" },
+                            es: { name: "Risotto de Gambas", shortDesc: "Azafrán, espárragos, limoncillo", longDesc: "Arroz Arborio suave con azafrán, gambas a la parrilla con limoncillo, puntas de espárragos verdes y crujiente de parmesano.", badge: "Chef recomienda ⭐" },
+                            zh: { name: "大虾意大利烩饭", shortDesc: "藏红花，芦笋，柠檬草", longDesc: "软糯的藏红花阿博里奥大米，柠檬草烤大虾，绿芦笋尖和帕尔马干酪片。", badge: "主厨推荐 ⭐" }
+                        }
+                    }
+                ]
+            },
+            "Desserts": {
+                icon: "icecream",
+                translations: { fr: "Desserts", en: "Desserts", de: "Nachspeisen", es: "Postres", zh: "甜点" },
+                items: [
+                    {
+                        id: 301,
+                        price: "8€",
+                        image: "https://images.pexels.com/photos/1126359/pexels-photo-1126359.jpeg?w=400",
+                        tab: "Desserts",
+                        allergens: ["Lactose", "Gluten", "Oeufs"],
+                        dietary: ["Végétarien"],
+                        translations: {
+                            fr: { name: "Tiramisu Maison", shortDesc: "Amaretto, café, cacao", longDesc: "La recette traditionnelle de la mama, mascarpone onctueux, biscuits imbibés à l'Amaretto et café robusta.", badge: "" },
+                            en: { name: "Homemade Tiramisu", shortDesc: "Amaretto, coffee, cocoa", longDesc: "The traditional mama's recipe, creamy mascarpone, biscuits soaked in Amaretto and robusta coffee.", badge: "" },
+                            de: { name: "Hausgemachtes Tiramisu", shortDesc: "Amaretto, Kaffee, Kakao", longDesc: "Das traditionelle Rezept von Mama, cremiger Mascarpone, in Amaretto und Robusta-Kaffee getränkte Kekse.", badge: "" },
+                            es: { name: "Tiramisú Casero", shortDesc: "Amaretto, café, cacao", longDesc: "La receta tradicional de la abuela, mascarpone cremoso, bizcochos bañados en Amaretto y café robusta.", badge: "" },
+                            zh: { name: "自制提拉米苏", shortDesc: "杏仁酒，咖啡，可可", longDesc: "传统的妈妈配方，奶油马斯卡彭奶酪，浸泡在杏仁酒和罗布斯塔咖啡中的饼干。", badge: "" }
+                        }
+                    }
+                ]
+            },
+            "Boissons": {
+                icon: "local_bar",
+                translations: { fr: "Boissons", en: "Drinks", de: "Getränke", es: "Bebidas", zh: "饮品" },
+                items: [
+                    {
+                        id: 401,
+                        price: "13€",
+                        image: "https://images.pexels.com/photos/544961/pexels-photo-544961.jpeg?w=400",
+                        tab: "Boissons",
+                        allergens: [],
+                        dietary: ["Vegan"],
+                        translations: {
+                            fr: { name: "Cocktail Moonlit", shortDesc: "Gin, violette, citron vert", longDesc: "Une création florale et acidulée à base de Gin artisanal, liqueur de violette, jus de citron vert et une touche de tonic.", badge: "Vibe Peak ⚡" },
+                            en: { name: "Moonlit Cocktail", shortDesc: "Gin, violet, lime", longDesc: "A floral and tangy creation with artisanal Gin, violet liqueur, lime juice and a dash of tonic.", badge: "Vibe Peak ⚡" },
+                            de: { name: "Moonlit Cocktail", shortDesc: "Gin, Veilchen, Limette", longDesc: "Eine blumige und spritzige Kreation mit handwerklich hergestelltem Gin, Veilchenlikör, Limettensaft und einem Schuss Tonic.", badge: "Vibe Peak ⚡" },
+                            es: { name: "Cóctel Moonlit", shortDesc: "Ginebra, violeta, lima", longDesc: "Una creación floral y ácida con ginebra artesanal, licor de violeta, zumo de lima y un toque de tónica.", badge: "Vibe Peak ⚡" },
+                            zh: { name: "月光鸡尾酒", shortDesc: "金酒，紫罗兰，青柠", longDesc: "带有手工金酒、紫罗兰利口酒、青柠汁和少许汤力水的花香和探戈感创意酒品。", badge: "氛围巅峰 ⚡" }
+                        }
+                    }
+                ]
+            }
+        };
+
+        let currentMenuCategory = "Entrées";
+        let currentLang = 'fr';
+        let activeAllergens = [];
+        let cart = []; // Order tracking
+
+        const uiTranslations = {
+            fr: {
+                cart: "Ajouter au panier",
+                added: "Ajouté au panier ! 🛍️",
+                allergens: "Allergènes",
+                back: "Retour",
+                menu: "Le Menu"
+            },
+            en: {
+                cart: "Add to cart",
+                added: "Added to cart! 🛍️",
+                allergens: "Allergens",
+                back: "Back",
+                menu: "The Menu"
+            },
+            de: {
+                cart: "In den Warenkorb",
+                added: "In den Warenkorb gelegt! 🛍️",
+                allergens: "Allergene",
+                back: "Zurück",
+                menu: "Das Menü"
+            },
+            es: {
+                cart: "Añadir al carrito",
+                added: "¡Añadido al carrito! 🛍️",
+                allergens: "Alérgenos",
+                back: "Volver",
+                menu: "El Menú"
+            },
+            zh: {
+                cart: "加入购物车",
+                added: "已加入购物车！ 🛍️",
+                allergens: "过敏原",
+                back: "返回",
+                menu: "菜单"
+            }
+        };
+
+        function setLang(lang) {
+            currentLang = lang;
+
+            // Update UI Interface
+            const ui = uiTranslations[currentLang];
+            document.querySelector('#screen-menu h1').innerText = ui.menu;
+
+            // Update lang selector styling
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                const l = btn.getAttribute('data-lang');
+                if (l === currentLang) {
+                    btn.style.color = '#7C3AED';
+                    btn.classList.add('underline', 'underline-offset-4');
+                } else {
+                    btn.style.color = '#F8F7F4';
+                    btn.classList.remove('underline', 'underline-offset-4');
+                }
+            });
+
+            renderMenu();
+        }
+
+        function toggleAllergen(allergen) {
+            const index = activeAllergens.indexOf(allergen);
+            if (index > -1) {
+                activeAllergens.splice(index, 1);
+            } else {
+                activeAllergens.push(allergen);
+            }
+
+            // Update button styles
+            document.querySelectorAll('.allergen-btn').forEach(btn => {
+                const alg = btn.getAttribute('data-allergen');
+                if (activeAllergens.includes(alg)) {
+                    btn.classList.add('bg-[#7C3AED]', 'text-white', 'shadow-lg', 'shadow-indigo-500/20');
+                    btn.classList.remove('bg-[#2A2A2A]');
+                } else {
+                    btn.classList.remove('bg-[#7C3AED]', 'shadow-lg', 'shadow-indigo-500/20');
+                    btn.classList.add('bg-[#2A2A2A]');
+                }
+            });
+
+            renderMenu();
+        }
+
+        function renderExplorer() {
+            const trends = document.getElementById('tendances-container');
+            const near = document.getElementById('near-me-container');
+            const news = document.getElementById('new-container');
+
+            trends.innerHTML = '';
+            near.innerHTML = '';
+            news.innerHTML = '';
+
+            const filteredVibe = currentVibe === 'all' ? venues : venues.filter(v => v.vibes.includes(currentVibe));
+
+            venues.slice(0, 3).forEach(v => {
+                trends.innerHTML += `
+                    <div onclick="showDetail(${v.id})" class="bg-white p-3 rounded-[32px] card-shadow flex-shrink-0 w-72 cursor-pointer dark:bg-zinc-900 border border-transparent dark:border-white/5 snap-start">
+                        <div class="relative h-44 rounded-[24px] overflow-hidden mb-3">
+                            <img src="${v.img}" class="w-full h-full object-cover">
+                            <div class="absolute top-3 right-3 px-3 py-1 bg-black/30 backdrop-blur-md rounded-full text-white text-[10px] font-bold border border-white/20 uppercase tracking-widest">${v.type}</div>
+                        </div>
+                        <div class="px-1 flex justify-between items-end">
+                            <div><h4 class="font-800 text-md">${v.name}</h4><p class="text-gray-400 text-xs font-medium">${v.cuisine} • ${v.dist}</p></div>
+                            <div class="bg-indigo-50 text-[#7C3AED] p-2 rounded-xl text-[10px] font-900 border border-indigo-100 uppercase dark:bg-zinc-800 dark:text-[#7C3AED]">${v.statusLabel}</div>
+                        </div>
+                    </div>`;
+            });
+
+            filteredVibe.forEach(v => {
+                near.innerHTML += `
+                    <div onclick="showDetail(${v.id})" class="bg-white p-3 rounded-[28px] card-shadow flex items-center gap-4 dark:bg-zinc-900 border border-transparent dark:border-white/5 cursor-pointer">
+                        <img src="${v.img}" class="size-20 rounded-[20px] object-cover">
+                        <div class="flex-1">
+                            <h4 class="font-800 text-md">${v.name}</h4>
+                            <p class="text-gray-400 text-xs font-medium">${v.type} • ${v.dist}</p>
+                            <div class="mt-2 flex items-center gap-2">
+                                <span class="size-1.5 ${v.badge} rounded-full"></span>
+                                <span class="text-gray-400 text-[10px] font-900 uppercase tracking-widest">${v.statusLabel}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            venues.filter(v => v.statusLabel === 'Nouveau').forEach(v => {
+                news.innerHTML += `
+                    <div onclick="showDetail(${v.id})" class="bg-white p-3 rounded-[32px] card-shadow flex-shrink-0 w-80 dark:bg-zinc-900 border border-transparent dark:border-white/5 cursor-pointer snap-start">
+                        <div class="relative h-48 rounded-[24px] overflow-hidden mb-4">
+                            <img src="${v.img}" class="w-full h-full object-cover">
+                            <span class="absolute top-4 left-4 px-3 py-1 bg-[#D946EF] text-white text-[9px] font-900 rounded-lg uppercase tracking-widest">New</span>
+                        </div>
+                        <h4 class="px-1 font-800 text-lg">${v.name}</h4>
+                        <p class="px-1 text-gray-400 text-xs font-medium">${v.type} • Rue Compiègne</p>
+                    </div>`;
+            });
+        }
+
+        function showDetail(id) {
+            const v = venues.find(item => item.id === id);
+            if (!v) return;
+
+            document.getElementById('detail-img').src = v.img;
+            document.getElementById('detail-name').innerText = v.name;
+
+            const badgeEl = document.getElementById('detail-status');
+            badgeEl.innerText = v.statusLabel + ' ●';
+            badgeEl.className = `px-3 py-1 ${v.badge} text-white text-[10px] font-800 rounded-full uppercase tracking-widest`;
+
+            document.getElementById('detail-desc').innerText =
+                `Découvrez ${v.name}, une adresse incontournable (${v.type}) située à seulement ${v.dist}. Profitez d'une ambiance unique et de produits de qualité dans ce lieu classé "${v.statusLabel}".`;
+
+            currentDetailId = id;
+            updateFavBtn();
+            navTo('detail');
+        }
+
+        function toggleFavorite(id, event) {
+            if (event) event.stopPropagation();
+            const index = favoriteIds.indexOf(id);
+            if (index === -1) {
+                favoriteIds.push(id);
+            } else {
+                favoriteIds.splice(index, 1);
+            }
+            updateFavBtn();
+            renderFavorites();
+        }
+
+        function updateFavBtn() {
+            const btn = document.getElementById('detail-fav-btn');
+            if (!btn || currentDetailId === null) return;
+            const isFav = favoriteIds.includes(currentDetailId);
+            const icon = btn.querySelector('.material-symbols-outlined');
+            if (isFav) {
+                btn.classList.add('text-rose-400');
+                icon.classList.add('fill-1');
+            } else {
+                btn.classList.remove('text-rose-400');
+                icon.classList.remove('fill-1');
+            }
+            btn.onclick = () => toggleFavorite(currentDetailId);
+        }
+
+        function renderFavorites() {
+            const container = document.getElementById('fav-list-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (favoriteIds.length === 0) {
+                container.className = "px-8 flex-1 flex flex-col items-center justify-center text-center pb-20";
+                container.innerHTML = `
+                    <div class="size-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 dark:bg-zinc-800">
+                        <span class="material-symbols-outlined text-gray-400 text-4xl">favorite</span>
+                    </div>
+                    <h3 class="text-xl font-800 mb-2">Aucun lieu sauvegardé</h3>
+                    <p class="text-gray-400 text-sm font-medium mb-8">Tes coups de cœur apparaîtront ici.</p>
+                    <button onclick="navTo('explorer')" class="bg-black text-white px-8 py-4 rounded-2xl font-800 dark:bg-white dark:text-black active:scale-95 transition-transform">Explorer les lieux</button>
+                `;
+            } else {
+                container.className = "px-8 space-y-6";
+                favoriteIds.forEach(id => {
+                    const v = venues.find(item => item.id === id);
+                    if (!v) return;
+                    container.innerHTML += `
+                        <div onclick="showDetail(${v.id})" class="bg-white rounded-[32px] overflow-hidden card-shadow dark:bg-zinc-900 border border-transparent dark:border-white/5 p-3 cursor-pointer">
+                            <div class="h-44 relative rounded-[24px] overflow-hidden mb-3">
+                                <img src="${v.img}" class="w-full h-full object-cover">
+                                <div onclick="toggleFavorite(${v.id}, event)" class="absolute top-3 right-3 size-10 bg-white/40 backdrop-blur-md rounded-full text-rose-500 flex items-center justify-center border border-white/20 active:scale-90 transition-transform">
+                                    <span class="material-symbols-outlined fill-1">favorite</span>
+                                </div>
+                            </div>
+                            <div class="px-2">
+                                <h4 class="font-800 text-lg">${v.name}</h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="size-1.5 ${v.badge} rounded-full"></span>
+                                    <span class="text-gray-400 text-[10px] font-900 uppercase tracking-widest">${v.statusLabel}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function setVibeFilter(vibe, el) {
+            currentVibe = vibe;
+            document.querySelectorAll('.v-tag').forEach(t => t.classList.remove('active'));
+            if (el) el.classList.add('active');
+            renderExplorer();
+        }
+
+        function navTo(screenId, pushHistory = true) {
+            if (screenId === currentScreen) return;
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById('screen-' + screenId);
+            if (target) {
+                target.classList.add('active');
+                if (pushHistory) historyStack.push(screenId);
+                currentScreen = screenId;
+            }
+
+            if (screenId === 'favorites') renderFavorites();
+
+            // Sync Nav Icons
+            document.querySelectorAll('.nav-item-h').forEach(i => i.classList.remove('active'));
+            const navIcon = document.getElementById('nav-' + screenId);
+            if (navIcon) navIcon.classList.add('active');
+
+            // Nav Visibility (Always visible as requested)
+            const bottomNav = document.getElementById('bottom-nav');
+            bottomNav.style.display = 'flex';
+
+            if (screenId === 'map') setTimeout(initMap, 200);
+            if (screenId === 'menu') renderMenu();
+            if (screenId === 'cart') renderCart();
+
+            // Notify parent if in iframe
+            if (window.parent && window.parent.onScreenChange) {
+                window.parent.onScreenChange(screenId);
+            }
+        }
+
+        function navBack() {
+            if (historyStack.length > 1) {
+                historyStack.pop(); // Remove current
+                const prev = historyStack.pop(); // Get previous
+                navTo(prev);
+            }
+        }
+
+        function toggleTheme(dark) {
+            isDarkMode = dark;
+            if (dark) document.body.classList.add('v-dark');
+            else document.body.classList.remove('v-dark');
+
+            if (map) {
+                const tiles = dark
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                L.tileLayer(tiles).addTo(map);
+            }
+        }
+
+        function initMap() {
+            if (map) {
+                map.invalidateSize();
+                return;
+            }
+            map = L.map('map-container', { zoomControl: false }).setView([49.4175, 2.8250], 16);
+            updateMapTiles();
+
+            venues.forEach(loc => {
+                const pulseClass = `pulse-${loc.status}`;
+                const icon = L.divIcon({
+                    className: 'custom-icon',
+                    html: `<div class="pulse ${pulseClass}"></div>`,
+                    iconSize: [20, 20]
+                });
+                L.marker(loc.pos, { icon }).addTo(map).on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    showMapCard(loc);
+                });
+            });
+
+            map.on('click', hideMapCard);
+        }
+
+        function showMapCard(venue) {
+            const card = document.getElementById('map-info-card');
+            document.getElementById('map-card-img').src = venue.img;
+            document.getElementById('map-card-name').innerHTML = `${venue.name} <span class="block text-[11px] text-gray-400 font-bold">${venue.type}</span> `;
+            const status = document.getElementById('map-card-status');
+            status.innerText = venue.statusLabel;
+            status.className = `text-[9px] font-900 uppercase tracking-widest mb-1 px-2 py-0.5 rounded-full w-fit text-white ${venue.bgColor}`;
+
+            // Direct update to the button's action
+            document.getElementById('map-card-link').onclick = () => showDetail(venue.id);
+
+            card.style.display = 'block';
+        }
+
+        function hideMapCard() {
+            document.getElementById('map-info-card').style.display = 'none';
+        }
+
+        function showPopup(message) {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-emerald-500/10">
+                    <span class="material-symbols-outlined text-[32px]">check_circle</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-4">Confirmation</h2>
+                <p class="font-bold mb-8 opacity-70">${message}</p>
+                <button onclick="closePopup()"
+                    class="w-full bg-black text-white font-800 py-4 rounded-3xl dark:bg-white dark:text-black">Génial !</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showGalleryPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-indigo-500/10">
+                    <span class="material-symbols-outlined text-[32px]">image</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-4">Galerie</h2>
+                <p class="font-bold mb-8 opacity-70">Sélectionner une photo depuis ta galerie</p>
+                <div class="grid grid-cols-2 gap-3 mb-8">
+                    <div class="aspect-square bg-gray-100 rounded-2xl dark:bg-zinc-800"></div>
+                    <div class="aspect-square bg-gray-100 rounded-2xl dark:bg-zinc-800"></div>
+                </div>
+                <button onclick="closePopup()"
+                    class="w-full bg-black text-white font-800 py-4 rounded-3xl dark:bg-white dark:text-black text-sm">Annuler</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showHistoryPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-fuchsia-50 text-fuchsia-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-fuchsia-500/10">
+                    <span class="material-symbols-outlined text-[32px]">history</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-4">Historique</h2>
+                <div class="space-y-3 mb-8 text-left">
+                    <div class="p-4 bg-gray-50 rounded-2xl dark:bg-zinc-800 border border-transparent dark:border-white/5">
+                        <p class="font-800 text-sm italic">"Table 12 - L'Art de Vivre"</p>
+                        <p class="text-[10px] opacity-40 font-bold mt-1">Il y a 2 heures</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-2xl dark:bg-zinc-800 border border-transparent dark:border-white/5">
+                        <p class="font-800 text-sm">"Table 04 - Le Bistrot"</p>
+                        <p class="text-[10px] opacity-40 font-bold mt-1">Hier, 20:15</p>
+                    </div>
+                </div>
+                <button onclick="closePopup()"
+                    class="w-full bg-black text-white font-800 py-4 rounded-3xl dark:bg-white dark:text-black">Fermer</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showManualCodePopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-amber-500/10">
+                    <span class="material-symbols-outlined text-[32px]">edit</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-2">Code Manuel</h2>
+                <p class="text-xs font-bold mb-6 opacity-50">Saisis le code affiché sur ta table</p>
+                <input type="text" placeholder="Ex: VIBE-1234" class="w-full bg-gray-50 border-none outline-none p-5 rounded-2xl font-800 text-center mb-8 dark:bg-zinc-800 text-inherit">
+                <button onclick="showPopup('Code validé ! 🚀');"
+                    class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform">Valider</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showLanguagePopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-blue-500/10">
+                    <span class="material-symbols-outlined text-[32px]">language</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-6">Langue</h2>
+                <div class="space-y-3 mb-8">
+                    <button onclick="closePopup()" class="w-full p-4 bg-indigo-50 text-[#7C3AED] rounded-2xl font-800 flex justify-between items-center border border-indigo-100 dark:bg-indigo-500/20 dark:border-indigo-500/30">
+                        Français <span class="material-symbols-outlined">check_circle</span>
+                    </button>
+                    <button onclick="closePopup()" class="w-full p-4 bg-gray-50 rounded-2xl font-800 flex justify-between items-center dark:bg-zinc-800">
+                        English
+                    </button>
+                    <button onclick="closePopup()" class="w-full p-4 bg-gray-50 rounded-2xl font-800 flex justify-between items-center dark:bg-zinc-800">
+                        Español
+                    </button>
+                </div>
+                <button onclick="closePopup()" class="w-full bg-black text-white font-800 py-4 rounded-3xl dark:bg-white dark:text-black">Annuler</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showNotificationPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-emerald-500/10">
+                    <span class="material-symbols-outlined text-[32px]">notifications</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-6">Notifications</h2>
+                <div class="space-y-4 mb-8 text-left">
+                    <div class="flex items-center justify-between">
+                        <span class="font-800 text-sm">Actualités Vibe</span>
+                        <div class="w-10 h-5 bg-emerald-500 rounded-full relative"><div class="absolute right-0.5 top-0.5 size-4 bg-white rounded-full"></div></div>
+                    </div>
+                    <div class="flex items-center justify-between opacity-50">
+                        <span class="font-800 text-sm">Offres éphémères</span>
+                        <div class="w-10 h-5 bg-gray-200 rounded-full dark:bg-zinc-700 relative"><div class="absolute left-0.5 top-0.5 size-4 bg-white rounded-full"></div></div>
+                    </div>
+                </div>
+                <button onclick="closePopup()" class="w-full bg-black text-white font-800 py-4 rounded-3xl dark:bg-white dark:text-black">Enregistrer</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showReviewsPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-amber-500/10">
+                    <span class="material-symbols-outlined text-[32px]">rate_review</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-6">Mes avis</h2>
+                <div class="space-y-4 mb-8 text-left">
+                    <div class="p-4 bg-gray-50 rounded-2xl dark:bg-zinc-800">
+                        <div class="flex gap-1 text-amber-400 mb-1">
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                        </div>
+                        <p class="font-800 text-xs italic mb-1">"Super burger au Secret !"</p>
+                        <p class="text-[9px] opacity-40 font-bold uppercase">Il y a 2 jours • Le Secret</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-2xl dark:bg-zinc-800">
+                        <div class="flex gap-1 text-amber-400 mb-1">
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                            <span class="material-symbols-outlined text-[14px] fill-1">star</span>
+                        </div>
+                        <p class="font-800 text-xs italic mb-1">"Toujours une ambiance au top."</p>
+                        <p class="text-[9px] opacity-40 font-bold uppercase">La semaine dernière • Le Garage</p>
+                    </div>
+                </div>
+                <button onclick="closePopup()" class="w-full bg-black text-white font-800 py-4 rounded-3xl dark:bg-white dark:text-black">Fermer</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showReferralPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-rose-500/10">
+                    <span class="material-symbols-outlined text-[32px]">card_giftcard</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-2">Parrainage</h2>
+                <p class="text-xs font-bold mb-6 text-center px-4 opacity-50">Offre 5€ à tes amis et gagne 5€ après leur première commande !</p>
+                
+                <div class="w-full bg-gray-50 border-2 border-dashed border-gray-200 p-5 rounded-2xl mb-8 dark:bg-zinc-800 dark:border-white/10 flex items-center justify-between">
+                    <span class="font-900 text-lg tracking-widest uppercase">VIBE-BOSS-2024</span>
+                    <span class="material-symbols-outlined text-[#7C3AED]">content_copy</span>
+                </div>
+                
+                <button onclick="showPopup('Code copié ! 📋');" class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 mb-3 active:scale-95 transition-transform">Partager le code</button>
+                <button onclick="closePopup()" class="w-full bg-black text-white font-800 py-4 rounded-3xl dark:bg-white dark:text-black">Quitter</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showLogoutPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-emerald-500/10">
+                    <span class="material-symbols-outlined text-[32px]">logout</span>
+                </div>
+                <h2 class="text-xl font-800 tracking-tight mb-2">Déconnexion</h2>
+                <p class="font-bold mb-8 opacity-70">Tu veux vraiment te déconnecter ?</p>
+                <div class="flex gap-4">
+                    <button onclick="closePopup()" class="flex-1 bg-gray-100 text-black font-800 py-4 rounded-2xl dark:bg-zinc-800 dark:text-white">Non</button>
+                    <button onclick="showPopup('À bientôt ! 👋');" class="flex-1 bg-rose-500 text-white font-800 py-4 rounded-2xl shadow-lg shadow-rose-500/20 active:scale-95 transition-transform">Oui, déconnexion</button>
+                </div>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function renderMenu() {
+            const catNav = document.getElementById('menu-categories');
+            const itemsContainer = document.getElementById('menu-items-container');
+
+            // Update UI Interface
+            document.querySelector('#screen-menu h1').innerText = uiTranslations[currentLang].menu;
+
+            // Render Categories
+            catNav.innerHTML = '';
+            Object.keys(menuData).forEach(cat => {
+                const isActive = cat === currentMenuCategory;
+                const label = menuData[cat].translations[currentLang];
+                catNav.innerHTML += `
+                    <button onclick="setMenuCategory('${cat}')" 
+                        class="px-6 py-2 rounded-full font-800 text-[11px] border border-gray-100 dark:border-white/5 transition-all whitespace-nowrap snap-center
+                        ${isActive ? 'bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white border-transparent shadow-lg shadow-indigo-500/30' : 'bg-gray-50 text-gray-400 dark:bg-zinc-900 dark:text-gray-500'}">
+                        ${label}
+                    </button>
+                `;
+            });
+
+            // Render Items
+            itemsContainer.innerHTML = '';
+            menuData[currentMenuCategory].items.forEach(item => {
+                const trans = item.translations[currentLang];
+                // Filtering Logic (Dimming)
+                let isFiltered = false;
+                if (activeAllergens.length > 0) {
+                    // Check allergens
+                    const hasAllergen = activeAllergens.some(a => item.allergens.includes(a));
+                    // Check dietary (Végétarien/Vegan)
+                    const isDietary = activeAllergens.filter(a => ['Végétarien', 'Vegan'].includes(a));
+                    let dietaryFail = false;
+                    if (isDietary.includes('Vegan') && !item.dietary.includes('Vegan')) dietaryFail = true;
+                    if (isDietary.includes('Végétarien') && !item.dietary.includes('Végétarien') && !item.dietary.includes('Vegan')) dietaryFail = true;
+
+                    if (hasAllergen || dietaryFail) isFiltered = true;
+                }
+
+                const badgeClass = trans.badge.includes('Best') || trans.badge.includes('热卖') ? 'bg-orange-500 shadow-orange-500/20' : 'bg-[#7C3AED] shadow-indigo-500/20';
+
+                itemsContainer.innerHTML += `
+                    <div onclick="openMenuPopup(${item.id})" class="group bg-white rounded-[40px] overflow-hidden card-shadow dark:bg-zinc-900 border border-transparent dark:border-white/5 active:scale-[0.97] transition-all duration-300 mb-8 ${isFiltered ? 'opacity-30' : 'opacity-100'}">
+                        <div class="relative h-64 overflow-hidden">
+                            <img src="${item.image}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                            ${trans.badge ? `
+                                <div class="absolute top-5 left-5 px-4 py-1.5 rounded-full text-[10px] font-900 uppercase text-white shadow-lg ${badgeClass} backdrop-blur-md">
+                                    ${trans.badge}
+                                </div>
+                            ` : ''}
+                            <div class="absolute bottom-5 right-5 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl dark:bg-black/90">
+                                <span class="font-800 text-[#7C3AED] text-lg">${item.price}</span>
+                            </div>
+                        </div>
+                        <div class="p-8">
+                            <h4 class="font-800 text-2xl leading-tight tracking-tight mb-2">${trans.name}</h4>
+                            <p class="text-gray-400 text-sm font-medium leading-relaxed mb-6">${trans.shortDesc}</p>
+                            <div class="flex justify-between items-center">
+                                <div class="flex gap-2">
+                                    ${item.allergens.length > 0 ? `
+                                        <div class="flex items-center gap-1.5 px-3 py-1 bg-gray-50 rounded-full dark:bg-zinc-800">
+                                            <span class="material-symbols-outlined text-[14px] text-gray-400">info</span>
+                                            <span class="text-[9px] font-900 uppercase tracking-widest text-gray-400">${uiTranslations[currentLang].allergens}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                    <div onclick="event.stopPropagation(); addToCart(${item.id})" class="size-12 rounded-full bg-indigo-50 flex items-center justify-center text-[#7C3AED] dark:bg-zinc-800 group-hover:bg-[#7C3AED] group-hover:text-white transition-colors cursor-pointer">
+                                        <span class="material-symbols-outlined text-[20px]">add</span>
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function setMenuCategory(cat) {
+            currentMenuCategory = cat;
+            renderMenu();
+        }
+
+
+        function openMenuPopup(itemId) {
+            const item = Object.values(menuData).flatMap(cat => cat.items).find(i => i.id === itemId);
+            if (!item) return;
+
+            const trans = item.translations[currentLang];
+
+            document.getElementById('menu-popup-img').src = item.image;
+            document.getElementById('menu-popup-name').innerText = trans.name;
+            document.getElementById('menu-popup-price').innerText = item.price;
+            document.getElementById('menu-popup-desc').innerText = trans.longDesc;
+
+            const badgeEl = document.getElementById('menu-popup-badge');
+            badgeEl.innerHTML = trans.badge ? `<span class="bg-[#7C3AED] text-white px-3 py-1 rounded-full text-[10px] font-900 uppercase tracking-widest">${trans.badge}</span>` : '';
+
+            const allergensEl = document.getElementById('menu-popup-allergens');
+            allergensEl.innerHTML = item.allergens.map(a => `<span class="px-3 py-1 bg-white/10 rounded-lg text-[10px] font-800 text-white/70 border border-white/10 shrink-0">${a}</span>`).join('');
+
+            // Update Popup Button Language
+            const cartBtn = document.querySelector('#menu-detail-popup button[onclick*="closeMenuPopup(); showPopup"]');
+            if (cartBtn) {
+                cartBtn.innerHTML = `
+                    <span class="material-symbols-outlined">add_shopping_cart</span>
+                    ${uiTranslations[currentLang].cart}
+                `;
+                cartBtn.onclick = function () {
+                    closeMenuPopup();
+                    showPopup(uiTranslations[currentLang].added);
+                };
+            }
+
+            const popup = document.getElementById('menu-detail-popup');
+            popup.style.display = 'flex';
+            setTimeout(() => {
+                popup.style.transform = 'translateY(0)';
+            }, 10);
+        }
+
+
+        function closeMenuPopup() {
+            const popup = document.getElementById('menu-detail-popup');
+            popup.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 500);
+        }
+
+        function closePopup() {
+            document.getElementById('generic-popup').style.display = 'none';
+        }
+
+
+        function addToCart(itemId) {
+            const item = Object.values(menuData).flatMap(cat => cat.items).find(i => i.id === itemId);
+            if (!item) return;
+
+            const existing = cart.find(c => c.id === itemId);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                cart.push({ ...item, quantity: 1 });
+            }
+
+            updateCartBar();
+            showPopup(uiTranslations[currentLang].added);
+        }
+
+        function updateCartBar() {
+            const bar = document.getElementById('cart-bar');
+            if (cart.length === 0) {
+                bar.style.display = 'none';
+                return;
+            }
+
+            const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = cart.reduce((sum, item) => {
+                const price = parseFloat(item.price.replace('€', ''));
+                return sum + (price * item.quantity);
+            }, 0);
+
+            document.getElementById('cart-count').innerText = totalCount;
+            document.getElementById('cart-total').innerText = totalPrice.toFixed(2) + "€";
+            bar.style.display = 'flex';
+
+            const sumTotal = document.getElementById('cart-summary-total');
+            if (sumTotal) sumTotal.innerText = totalPrice.toFixed(2) + "€";
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-64 text-center">
+                        <div class="size-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 dark:bg-zinc-800">
+                            <span class="material-symbols-outlined text-gray-300 text-4xl">shopping_cart</span>
+                        </div>
+                        <h3 class="text-xl font-800 mb-2">Ton panier est vide</h3>
+                        <p class="text-gray-400 text-sm font-medium mb-8 px-12">Ajoute tes plats préférés pour commencer ta commande !</p>
+                        <button onclick="navTo('menu')" class="bg-[#7C3AED] text-white px-8 py-4 rounded-2xl font-800 active:scale-95 transition-transform">Retour au Menu</button>
+                    </div>
+                `;
+                document.getElementById('cart-summary-total').innerText = "0.00€";
+                return;
+            }
+
+            let total = 0;
+            cart.forEach(item => {
+                const trans = item.translations[currentLang];
+                const priceNum = parseFloat(item.price.replace('€', ''));
+                const itemTotal = priceNum * item.quantity;
+                total += itemTotal;
+
+                container.innerHTML += `
+                    <div class="flex gap-3 bg-white rounded-[24px] p-2 card-shadow dark:bg-zinc-900 border border-transparent dark:border-white/5">
+                        <div class="size-16 rounded-[16px] overflow-hidden shrink-0">
+                            <img src="${item.image}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 py-0.5 pr-1 flex flex-col justify-between">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-800 text-[13px] line-clamp-1 leading-tight">${trans.name}</h4>
+                                <p class="text-[#7C3AED] font-900 text-[11px] ml-2 shrink-0">${item.price}</p>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <div class="flex items-center gap-2 bg-gray-50 dark:bg-zinc-800 rounded-full p-0.5 border border-gray-100 dark:border-white/5">
+                                    <button onclick="changeQuantity(${item.id}, -1)" class="size-6 rounded-full bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-400 active:scale-90 transition-transform shadow-sm">
+                                        <span class="material-symbols-outlined text-[14px]">remove</span>
+                                    </button>
+                                    <span class="font-900 text-[11px] w-3 text-center">${item.quantity}</span>
+                                    <button onclick="changeQuantity(${item.id}, 1)" class="size-6 rounded-full bg-white dark:bg-zinc-700 flex items-center justify-center text-[#7C3AED] active:scale-90 transition-transform shadow-sm">
+                                        <span class="material-symbols-outlined text-[14px]">add</span>
+                                    </button>
+                                </div>
+                                <button onclick="changeQuantity(${item.id}, -${item.quantity})" class="text-gray-300 active:text-rose-500 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('cart-summary-total').innerText = total.toFixed(2) + "€";
+        }
+
+        function changeQuantity(itemId, delta) {
+            const index = cart.findIndex(c => c.id === itemId);
+            if (index === -1) return;
+
+            cart[index].quantity += delta;
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+
+            updateCartBar();
+            renderCart();
+        }
+
+        function callWaiter() {
+            showPopup("Un serveur arrive ! 🔔");
+        }
+
+        function showJobsPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-indigo-500/10">
+                    <span class="material-symbols-outlined text-[32px]">work</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-2">Rejoindre la team</h2>
+                <p class="text-xs font-bold opacity-50 mb-8 uppercase tracking-widest">3 postes disponibles à Compiègne</p>
+                
+                <div class="space-y-3 mb-8 text-left">
+                    <div class="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl border border-transparent hover:border-indigo-500/30 transition-all cursor-pointer">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-800 text-sm">Chef de Rang</span>
+                            <span class="text-[9px] font-900 text-indigo-500 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-full">CDI</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 font-medium">Expérience exigée, sens du service premium.</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl border border-transparent hover:border-indigo-500/30 transition-all cursor-pointer">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-800 text-sm">Bartender (H/F)</span>
+                            <span class="text-[9px] font-900 text-indigo-500 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-full">Mixologie</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 font-medium">Passionné(e) par la création de cocktails signature.</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl border border-transparent hover:border-indigo-500/30 transition-all cursor-pointer">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-800 text-sm">Runner Cuisine</span>
+                            <span class="text-[9px] font-900 text-indigo-500 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-full">Saisonnier</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 font-medium">Énergie débordante et esprit d'équipe.</p>
+                    </div>
+                </div>
+
+                <button onclick="showPopup('Candidature envoyée ! 📩')" class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform mb-3">
+                    Postuler maintenant
+                </button>
+                <button onclick="closePopup()" class="w-full py-4 text-gray-400 font-800 text-sm">Plus tard</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showReviewPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-amber-500/10">
+                    <span class="material-symbols-outlined text-[32px]">rate_review</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-2">Ton avis compte</h2>
+                <p class="text-[11px] font-bold opacity-60 mb-8">Partage ton expérience avec la communauté !</p>
+                
+                <div class="flex justify-center gap-2 mb-8">
+                    <span class="material-symbols-outlined text-amber-400 text-3xl cursor-pointer hover:scale-110 transition-transform">star</span>
+                    <span class="material-symbols-outlined text-amber-400 text-3xl cursor-pointer hover:scale-110 transition-transform">star</span>
+                    <span class="material-symbols-outlined text-amber-400 text-3xl cursor-pointer hover:scale-110 transition-transform">star</span>
+                    <span class="material-symbols-outlined text-amber-400 text-3xl cursor-pointer hover:scale-110 transition-transform">star</span>
+                    <span class="material-symbols-outlined text-gray-200 dark:text-zinc-700 text-3xl cursor-pointer hover:scale-110 transition-transform">star</span>
+                </div>
+
+                <textarea placeholder="Ton commentaire..." class="w-full bg-gray-50 dark:bg-zinc-800 p-4 rounded-2xl border-none outline-none text-sm font-medium h-32 mb-6 focus:ring-2 ring-indigo-500/20 transition-all"></textarea>
+
+                <button onclick="showPopup('Merci pour ton avis ! ⭐');" class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform mb-3">
+                    Publier mon avis
+                </button>
+                <button onclick="closePopup()" class="w-full py-4 text-gray-400 font-800 text-sm">Annuler</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showBillPopup() {
+            const container = document.getElementById('popup-content-container');
+            const total = cart.reduce((sum, item) => {
+                const price = parseFloat(item.price.replace('€', ''));
+                return sum + (price * item.quantity);
+            }, 0) || 42.50; // Fallback to simulated if cart empty
+            container.innerHTML = `
+                <div class="size-16 bg-indigo-50 text-[#7C3AED] rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-indigo-500/10">
+                    <span class="material-symbols-outlined text-[32px]">credit_card</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-2">Payer l'addition</h2>
+                <div class="bg-gray-50 dark:bg-zinc-800 p-6 rounded-[32px] mb-8">
+                    <p class="text-xs font-900 uppercase tracking-widest text-gray-400 mb-1">Total à régler</p>
+                    <p class="text-4xl font-900 text-[#7C3AED]">${total.toFixed(2)}€</p>
+                </div>
+                <div class="space-y-3">
+                    <button onclick="showPopup('Paiement accepté ! 💳');"
+                        class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform">
+                        Payer en entier
+                    </button>
+                    <button onclick="showSplitBill()"
+                        class="w-full bg-white text-[#7C3AED] border-2 border-[#7C3AED] font-800 py-4 rounded-3xl active:scale-95 transition-transform dark:bg-zinc-900">
+                        Diviser l'addition
+                    </button>
+                    <button onclick="closePopup()" class="w-full py-4 text-gray-400 font-800 text-sm">Annuler</button>
+                </div>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function showSplitBill() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <div class="size-16 bg-fuchsia-50 text-fuchsia-500 rounded-3xl flex items-center justify-center mb-6 mx-auto dark:bg-fuchsia-500/10">
+                    <span class="material-symbols-outlined text-[32px]">groups</span>
+                </div>
+                <h2 class="text-2xl font-800 tracking-tight mb-2">Diviser</h2>
+                <p class="text-sm font-bold opacity-50 mb-8">Combien de personnes ?</p>
+                
+                <div class="flex items-center justify-center gap-8 mb-10">
+                    <button onclick="updateSplit(-1)" class="size-12 rounded-full border-2 border-gray-100 dark:border-white/10 flex items-center justify-center text-gray-400 active:scale-90 transition-transform">
+                        <span class="material-symbols-outlined">remove</span>
+                    </button>
+                    <span id="split-count" class="text-5xl font-900">2</span>
+                    <button onclick="updateSplit(1)" class="size-12 rounded-full border-2 border-[#7C3AED] flex items-center justify-center text-[#7C3AED] active:scale-90 transition-transform">
+                        <span class="material-symbols-outlined">add</span>
+                    </button>
+                </div>
+
+                <div id="split-result" class="bg-indigo-50 dark:bg-indigo-500/10 p-6 rounded-[32px] mb-8">
+                    <p class="text-xs font-900 uppercase tracking-widest text-[#7C3AED] mb-1">Par personne</p>
+                    <p class="text-3xl font-900 text-[#7C3AED] tracking-tight">21.25€</p>
+                </div>
+
+                <button onclick="showPopup('Addition divisée ! 🚀')"
+                    class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform">
+                    Confirmer
+                </button>
+                <button onclick="closePopup()" class="w-full py-4 text-gray-400 font-800 text-sm">Annuler</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        let currentSplitCount = 2;
+        function updateSplit(delta) {
+            currentSplitCount = Math.max(1, currentSplitCount + delta);
+            document.getElementById('split-count').innerText = currentSplitCount;
+            const total = cart.reduce((sum, item) => {
+                const price = parseFloat(item.price.replace('€', ''));
+                return sum + (price * item.quantity);
+            }, 0) || 42.50;
+            const share = total / currentSplitCount;
+            document.querySelector('#split-result p:last-child').innerText = share.toFixed(2) + "€";
+        }
+
+        function updateMapTiles() {
+            if (!map) return;
+            const tiles = isDarkMode
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+            L.tileLayer(tiles).addTo(map);
+        }
+
+        // Exposed global for parent
+        window.navTo = navTo;
+        window.toggleTheme = (dark) => {
+            toggleTheme(dark);
+            updateMapTiles();
+        };
+
+        // Init
+        renderExplorer();
+        setLang('fr');
+        document.getElementById('nav-explorer').classList.add('active');
+    </script>
+</body>
+
+</html>
