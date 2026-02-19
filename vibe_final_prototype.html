@@ -33,34 +33,34 @@
             padding: 0;
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #F0F0F0;
-            /* Institutional background for desktop */
             color: var(--v-text);
             height: 100vh;
+            height: 100dvh;
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
+            width: 100vw;
         }
 
         .app-container {
             width: 100%;
             max-width: 375px;
-            /* App width on desktop */
             height: 100%;
-            max-height: 100vh;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             background-color: var(--v-bg);
             box-shadow: 0 0 100px rgba(0, 0, 0, 0.1);
-            /* Elevation on desktop */
         }
 
-        /* Mobile specific overrides to take full screen */
-        @media (max-width: 375px) {
+        /* Mobile full-screen */
+        @media (max-width: 480px) {
             .app-container {
                 max-width: none;
+                width: 100vw;
+                height: 100dvh;
                 box-shadow: none;
             }
         }
@@ -72,6 +72,7 @@
             display: none;
             flex-direction: column;
             z-index: 10;
+            overflow-x: hidden;
         }
 
         .screen.active {
@@ -638,7 +639,7 @@
 
         <!-- NAV -->
         <nav id="bottom-nav"
-            class="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex justify-around items-center z-50 dark:bg-black/80 dark:border-white/5 pb-[env(safe-area-inset-bottom, 24px)]">
+            class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[375px] p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex justify-around items-center z-[2000] dark:bg-black/80 dark:border-white/5 pb-[env(safe-area-inset-bottom, 24px)]">
             <div onclick="navTo('explorer')" class="nav-item-h active" id="nav-explorer"><span
                     class="material-symbols-outlined">explore</span></div>
             <div onclick="navTo('map')" class="nav-item-h" id="nav-map"><span
