@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIBE - Dashboard Restaurateur</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="dashboard-manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600" />
+    <style>
+        :root {
+            --v-bg: #0D0D0D;
+            --v-text: #F8F7F4;
+            --v-card: #1C1C1E;
+            --v-accent: #7C3AED;
+            --v-secondary: #D946EF;
+            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--v-bg);
+            color: var(--v-text);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--v-card);
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 40px 24px;
+            position: fixed;
+            height: 100vh;
+            z-index: 50;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 48px;
+            min-height: 100vh;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border-radius: 20px;
+            color: #F8F7F4;
+            font-weight: 700;
+            transition: var(--transition);
+            cursor: pointer;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--v-accent);
+            background: rgba(124, 58, 237, 0.08);
+        }
+
+        .nav-item.active .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+
+        .card-shadow {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        }
+
+        .status-btn {
+            border: 2px solid transparent;
+            transition: var(--transition);
+        }
+
+        .status-btn.active.available {
+            border-color: #10B981;
+            background: #10B98110;
+        }
+
+        .status-btn.active.vibrant {
+            border-color: #F59E0B;
+            background: #F59E0B10;
+        }
+
+        .status-btn.active.full {
+            border-color: #EF4444;
+            background: #EF444410;
+        }
+
+        @media (max-width: 1024px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+                padding-bottom: 120px;
+                width: 100%;
+            }
+
+            .mobile-header {
+                display: flex;
+            }
+
+            .mobile-nav {
+                display: flex;
+            }
+
+            /* Adjust cards for mobile */
+            .card-shadow {
+                border-radius: 32px !important;
+            }
+
+            section {
+                margin-bottom: 32px !important;
+            }
+
+            h2#header-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        .mobile-header {
+            display: none;
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--v-bg);
+            z-index: 100;
+            padding: 16px;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .mobile-menu-dropdown {
+            position: fixed;
+            top: 72px;
+            left: 16px;
+            right: 16px;
+            background: var(--v-card);
+            border-radius: 32px;
+            padding: 24px;
+            z-index: 101;
+            display: none;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .v-dark .mobile-menu-dropdown {
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--v-card);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 12px 16px 24px;
+            display: none;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(var(--v-card-rgb, 255, 255, 255), 0.8);
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .item-out-of-stock {
+            opacity: 0.5;
+            filter: grayscale(1);
+        }
+
+        /* Stats Styles */
+        .chart-bar {
+            transition: height 1s ease-out;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .peak-hour-chip {
+            background: rgba(124, 58, 237, 0.05);
+            border: 1px solid rgba(124, 58, 237, 0.1);
+        }
+
+        .peak-hour-chip.high {
+            background: rgba(124, 58, 237, 0.2);
+            border-color: rgba(124, 58, 237, 0.3);
+            color: var(--v-accent);
+        }
+    </style>
+</head>
+
+<body class="v-dark antialiased">
+    <!-- SIDEBAR -->
+    <aside class="sidebar card-shadow dark:border-white/5">
+        <div class="flex items-center gap-3 mb-12 px-4">
+            <div
+                class="size-10 rounded-2xl bg-[#7C3AED] flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                <span class="material-symbols-outlined text-[24px]">vibration</span>
+            </div>
+            <h1 class="text-2xl font-800 tracking-tighter">VIBE<span class="text-[#7C3AED]"> Pro</span></h1>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-item active" id="nav-home" onclick="navTo('home')">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Accueil</span>
+            </div>
+            <div class="nav-item" id="nav-menu" onclick="navTo('menu')">
+                <span class="material-symbols-outlined">restaurant_menu</span>
+                <span>Menu</span>
+            </div>
+            <div class="nav-item" id="nav-stats" onclick="navTo('stats')">
+                <span class="material-symbols-outlined">insights</span>
+                <span>Stats</span>
+            </div>
+            <div class="nav-item" onclick="navTo('recruitment')">
+                <span class="material-symbols-outlined">badge</span>
+                <span>Recrutement</span>
+            </div>
+            <div class="nav-item mt-8 pt-8 border-t border-gray-100 dark:border-white/5" id="nav-settings"
+                onclick="navTo('settings')">
+                <span class="material-symbols-outlined">settings</span>
+                <span>Paramètres</span>
+            </div>
+        </nav>
+
+        <div class="mt-auto p-4 bg-white/5 dark:bg-zinc-900 rounded-3xl flex items-center gap-4">
+            <img src="https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?w=100"
+                class="size-10 rounded-full object-cover">
+            <div class="overflow-hidden">
+                <p class="font-800 text-sm truncate">L'Art de Vivre</p>
+                <p class="text-[10px] text-[#F8F7F4] font-bold uppercase tracking-wider">Gérant</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MOBILE HEADER -->
+    <header class="mobile-header card-shadow dark:border-white/5">
+        <div class="flex items-center gap-4">
+            <button onclick="toggleMobileMenu()"
+                class="size-10 rounded-full flex items-center justify-center text-[#F8F7F4] dark:text-[#F8F7F4]">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <div class="size-8 rounded-xl bg-[#7C3AED] flex items-center justify-center text-white">
+                    <span class="material-symbols-outlined text-[18px]">vibration</span>
+                </div>
+                <h1 class="text-lg font-800 tracking-tighter">VIBE<span class="text-[#7C3AED]"> Pro</span></h1>
+            </div>
+    </header>
+
+    <!-- MOBILE DROPDOWN MENU -->
+    <div id="mobile-menu" class="mobile-menu-dropdown animate-in slide-in-from-top-4 duration-300">
+        <div class="space-y-2">
+            <div onclick="navTo('home'); toggleMobileMenu()"
+                class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-800 text-[#7C3AED] font-800">
+                <span class="material-symbols-outlined">dashboard</span> Accueil
+            </div>
+            <div onclick="navTo('menu'); toggleMobileMenu()"
+                class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 dark:hover:bg-zinc-800 font-700">
+                <span class="material-symbols-outlined">restaurant_menu</span> Menu
+            </div>
+            <div onclick="navTo('stats'); toggleMobileMenu()"
+                class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 dark:hover:bg-zinc-800 font-700">
+                <span class="material-symbols-outlined">insights</span> Stats
+            </div>
+            <div onclick="navTo('recruitment'); toggleMobileMenu()"
+                class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 dark:hover:bg-zinc-800 font-700">
+                <span class="material-symbols-outlined">badge</span> Recrutement
+            </div>
+            <div onclick="navTo('settings'); toggleMobileMenu()"
+                class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 dark:hover:bg-zinc-800 font-700 border-t border-gray-100 dark:border-white/5 pt-4">
+                <span class="material-symbols-outlined">settings</span> Paramètres
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <header class="hidden lg:flex justify-between items-center mb-12">
+            <div>
+                <p id="header-subtitle" class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest mb-1">
+                    TABLEAU DE BORD</p>
+                <h2 id="header-title" class="text-3xl font-800 tracking-tight">Bonjour, l'Art de Vivre 👋</h2>
+            </div>
+        </header>
+
+        <!-- Mobile Title (Helper for Header) -->
+        <div class="lg:hidden mb-8">
+            <p id="mob-header-subtitle" class="text-[9px] font-bold text-[#F8F7F4] uppercase tracking-widest mb-1">
+                TABLEAU DE BORD</p>
+            <h2 id="mob-header-title" class="text-2xl font-800 tracking-tight">Bonjour 👋</h2>
+        </div>
+
+        <!-- HOME SCREEN -->
+        <div id="screen-home" class="screen active">
+
+            <!-- LIVE STATUS SECTION -->
+            <section class="mb-12">
+                <h3 class="text-xl font-800 mb-6">Statut en direct de votre établissement</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div id="status-available" onclick="setStatus('available')"
+                        class="status-btn active available bg-zinc-900 p-8 rounded-[40px] card-shadow cursor-pointer">
+                        <div
+                            class="size-12 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center mb-6 dark:bg-emerald-500/10">
+                            <span class="material-symbols-outlined font-bold">check_circle</span>
+                        </div>
+                        <h4 class="text-2xl font-800 mb-2">Disponible</h4>
+                        <p class="text-sm text-[#F8F7F4] font-medium">Idéal pour attirer de nouveaux clients maintenant.
+                        </p>
+                    </div>
+                    <div id="status-vibrant" onclick="setStatus('vibrant')"
+                        class="status-btn vibrant bg-zinc-900 p-8 rounded-[40px] card-shadow cursor-pointer">
+                        <div
+                            class="size-12 bg-orange-500/10 text-orange-500 rounded-2xl flex items-center justify-center mb-6 dark:bg-orange-500/10">
+                            <span class="material-symbols-outlined font-bold">bolt</span>
+                        </div>
+                        <h4 class="text-2xl font-800 mb-2">Animé</h4>
+                        <p class="text-sm text-[#F8F7F4] font-medium">L'ambiance monte ! Recommandé pour les avertis.
+                        </p>
+                    </div>
+                    <div id="status-full" onclick="setStatus('full')"
+                        class="status-btn full bg-zinc-900 p-8 rounded-[40px] card-shadow cursor-pointer">
+                        <div
+                            class="size-12 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mb-6 dark:bg-rose-500/10">
+                            <span class="material-symbols-outlined font-bold">block</span>
+                        </div>
+                        <h4 class="text-2xl font-800 mb-2">Complet</h4>
+                        <p class="text-sm text-[#F8F7F4] font-medium">Plus de table ? Les clients recevront une
+                            notification.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STATS GRID -->
+            <section class="mb-12">
+                <h3 class="text-xl font-800 mb-6">Statistiques du jour</h3>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-zinc-900 p-6 rounded-[32px] card-shadow">
+                        <p class="text-[#F8F7F4]/60 font-bold text-[10px] uppercase tracking-wider mb-2">Vues</p>
+                        <p class="text-3xl font-800 tracking-tight text-[#F8F7F4]">1.2k</p>
+                        <p class="text-emerald-500 text-[10px] font-bold mt-2">+12% vs hier</p>
+                    </div>
+                    <div class="bg-zinc-900 p-6 rounded-[32px] card-shadow">
+                        <p class="text-[#F8F7F4]/60 font-bold text-[10px] uppercase tracking-wider mb-2">Clics</p>
+                        <p class="text-3xl font-800 tracking-tight text-[#F8F7F4]">450</p>
+                        <p class="text-emerald-500 text-[10px] font-bold mt-2">+5% vs hier</p>
+                    </div>
+                    <div class="bg-zinc-900 p-6 rounded-[32px] card-shadow">
+                        <p class="text-[#F8F7F4]/60 font-bold text-[10px] uppercase tracking-wider mb-2">Commandes</p>
+                        <p class="text-3xl font-800 tracking-tight text-[#F8F7F4]">28</p>
+                        <p class="text-rose-500 text-[10px] font-bold mt-2">-2% vs hier</p>
+                    </div>
+                    <div class="bg-zinc-900 p-6 rounded-[32px] card-shadow">
+                        <p class="text-[#F8F7F4]/60 font-bold text-[10px] uppercase tracking-wider mb-2">Panier Moyen
+                        </p>
+                        <p class="text-3xl font-800 tracking-tight text-[#F8F7F4]">42.50€</p>
+                        <p class="text-emerald-500 text-[10px] font-bold mt-2">+1.50€ vs hier</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NOTIFICATIONS -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-zinc-900 p-8 rounded-[40px] card-shadow">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-xl font-800">Notifications récentes</h3>
+                        <span class="text-[#7C3AED] font-bold text-xs uppercase cursor-pointer">Tout voir</span>
+                    </div>
+                    <div class="space-y-6">
+                        <div
+                            class="flex gap-4 p-4 hover:bg-white/5 dark:hover:bg-zinc-800 rounded-3xl transition-all cursor-pointer">
+                            <div
+                                class="size-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shrink-0 dark:bg-amber-500/10">
+                                <span class="material-symbols-outlined">rate_review</span>
+                            </div>
+                            <div>
+                                <p class="font-800 text-sm">Nouvel avis 5⭐</p>
+                                <p class="text-xs text-[#F8F7F4] font-medium">Marie-Laure a laissé un commentaire
+                                    élogieux.
+                                </p>
+                                <p class="text-[9px] text-[#F8F7F4] font-bold uppercase mt-2 italic">Il y a 5 minutes
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex gap-4 p-4 hover:bg-white/5 dark:hover:bg-zinc-800 rounded-3xl transition-all cursor-pointer">
+                            <div
+                                class="size-12 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center shrink-0 dark:bg-indigo-500/10">
+                                <span class="material-symbols-outlined">work</span>
+                            </div>
+                            <div>
+                                <p class="font-800 text-sm">Nouvelle candidature</p>
+                                <p class="text-xs text-[#F8F7F4] font-medium">Thomas a postulé pour le poste de Chef de
+                                    Rang.
+                                </p>
+                                <p class="text-[9px] text-[#F8F7F4] font-bold uppercase mt-2 italic">Il y a 2 heures</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-zinc-900 p-8 rounded-[40px] card-shadow">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-xl font-800">Top plats commandés</h3>
+                        <span class="material-symbols-outlined text-[#F8F7F4]">more_horiz</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-2">
+                            <div class="flex items-center gap-4">
+                                <div class="size-12 rounded-2xl overflow-hidden">
+                                    <img src="https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=100"
+                                        class="w-full h-full object-cover">
+                                </div>
+                                <p class="font-800 text-sm">Saumon Grillé</p>
+                            </div>
+                            <p class="font-900 text-[#7C3AED]">15 fois</p>
+                        </div>
+                        <div class="flex items-center justify-between p-2">
+                            <div class="flex items-center gap-4">
+                                <div class="size-12 rounded-2xl overflow-hidden">
+                                    <img src="https://images.pexels.com/photos/1633525/pexels-photo-1633525.jpeg?w=100"
+                                        class="w-full h-full object-cover">
+                                </div>
+                                <p class="font-800 text-sm">Burger Signature</p>
+                            </div>
+                            <p class="font-900 text-[#7C3AED]">12 fois</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- MENU SCREEN -->
+        <div id="screen-menu" class="screen">
+            <div class="flex flex-wrap gap-4 mb-10">
+                <button onclick="filterMenu('Entrées')"
+                    class="cat-filter active px-8 py-3 bg-[#7C3AED] text-white rounded-2xl font-800 text-sm shadow-lg shadow-indigo-500/20 transition-all">Entrées</button>
+                <button onclick="filterMenu('Plats')"
+                    class="cat-filter px-8 py-3 bg-zinc-900 rounded-2xl font-800 text-sm card-shadow text-[#F8F7F4] hover:text-[#7C3AED] transition-all">Plats</button>
+                <button onclick="filterMenu('Desserts')"
+                    class="cat-filter px-8 py-3 bg-zinc-900 rounded-2xl font-800 text-sm card-shadow text-[#F8F7F4] hover:text-[#7C3AED] transition-all">Desserts</button>
+                <button onclick="filterMenu('Boissons')"
+                    class="cat-filter px-8 py-3 bg-zinc-900 rounded-2xl font-800 text-sm card-shadow text-[#F8F7F4] hover:text-[#7C3AED] transition-all">Boissons</button>
+            </div>
+
+            <div id="menu-items-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <!-- Menu Items Generated Here -->
+            </div>
+
+            <!-- FLOAT ADD BUTTON -->
+            <button onclick="openAddPopup()"
+                class="fixed bottom-32 right-12 size-16 bg-[#7C3AED] text-white rounded-full shadow-2xl shadow-indigo-500/40 flex items-center justify-center active:scale-95 transition-transform z-50 lg:bottom-12">
+                <span class="material-symbols-outlined text-[32px]">add</span>
+            </button>
+        </div>
+
+        <!-- STATS SCREEN -->
+        <div id="screen-stats" class="screen px-4 pb-12 lg:px-0">
+            <!-- Weekly Comparison Header -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="bg-zinc-900 p-8 rounded-[40px] card-shadow border-l-4 border-emerald-500">
+                    <p class="text-[#F8F7F4] font-bold text-[10px] uppercase tracking-widest mb-2">Performances Hebdo
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <h4 class="text-3xl font-800 text-emerald-500">+18.5%</h4>
+                        <span class="material-symbols-outlined text-emerald-500">trending_up</span>
+                    </div>
+                    <p class="text-xs text-[#F8F7F4] mt-2 font-medium">vs la semaine dernière</p>
+                </div>
+                <div class="bg-zinc-900 p-8 rounded-[40px] card-shadow">
+                    <p class="text-[#F8F7F4] font-bold text-[10px] uppercase tracking-widest mb-2">Total Vues (7j)</p>
+                    <h4 class="text-3xl font-800 text-[#F8F7F4]">8,432</h4>
+                    <p class="text-xs text-emerald-500 mt-2 font-bold">+1,204 nouveaux</p>
+                </div>
+                <div class="bg-zinc-900 p-8 rounded-[40px] card-shadow">
+                    <p class="text-[#F8F7F4] font-bold text-[10px] uppercase tracking-widest mb-2">Total Commandes (7j)
+                    </p>
+                    <h4 class="text-3xl font-800 text-[#F8F7F4]">194</h4>
+                    <p class="text-xs text-rose-500 mt-2 font-bold">-4 vs hebdo préc.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
+                <!-- Views Chart -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-800 text-[#F8F7F4]">Vues de la semaine</h3>
+                        <div class="flex items-center gap-2">
+                            <div class="size-3 rounded-full bg-[#7C3AED]"></div>
+                            <span class="text-[10px] font-bold text-[#F8F7F4]">Vues / Jour</span>
+                        </div>
+                    </div>
+                    <div id="views-chart" class="flex items-end justify-between h-48 gap-4 px-4 child-bars">
+                        <!-- Bars dynamically rendered -->
+                    </div>
+                    <div class="flex justify-between mt-6 px-4 text-[10px] font-bold text-[#F8F7F4] uppercase">
+                        <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+                    </div>
+                </div>
+
+                <!-- Orders Chart -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-800 text-[#F8F7F4]">Commandes de la semaine</h3>
+                        <div class="flex items-center gap-2">
+                            <div class="size-3 rounded-full bg-[#D946EF]"></div>
+                            <span class="text-[10px] font-bold text-[#F8F7F4]">Commandes</span>
+                        </div>
+                    </div>
+                    <div id="orders-chart" class="flex items-end justify-between h-48 gap-4 px-4 child-bars">
+                        <!-- Bars dynamically rendered -->
+                    </div>
+                    <div class="flex justify-between mt-6 px-4 text-[10px] font-bold text-[#F8F7F4] uppercase">
+                        <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Top 3 Dishes -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-800 text-[#F8F7F4]">Top 3 Plats</h3>
+                        <span
+                            class="text-[10px] font-bold text-[#F8F7F4] tracking-widest uppercase italic">Populaire</span>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-6 p-4 bg-white/5 rounded-3xl">
+                            <div class="size-16 rounded-2xl overflow-hidden shadow-sm">
+                                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
+                                    class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-800 text-lg text-[#F8F7F4]">Saumon Grillé</p>
+                                <p class="text-xs text-[#7C3AED] font-bold uppercase tracking-widest">112 commandes
+                                    (hebdo)</p>
+                            </div>
+                            <div
+                                class="size-10 bg-white/10 text-[#F8F7F4] rounded-full flex items-center justify-center font-900 text-sm">
+                                1</div>
+                        </div>
+                        <div class="flex items-center gap-6 p-4 hover:bg-white/5 rounded-3xl transition-colors">
+                            <div class="size-16 rounded-2xl overflow-hidden shadow-sm">
+                                <img src="https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=400"
+                                    class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-800 text-lg text-[#F8F7F4]">Burrata Crémeuse</p>
+                                <p class="text-xs text-[#F8F7F4] font-bold uppercase tracking-widest">84 commandes</p>
+                            </div>
+                            <div
+                                class="size-10 bg-white/5 text-[#F8F7F4] rounded-full flex items-center justify-center font-900 text-sm">
+                                2</div>
+                        </div>
+                        <div class="flex items-center gap-6 p-4 hover:bg-white/5 rounded-3xl transition-colors">
+                            <div class="size-16 rounded-2xl overflow-hidden shadow-sm border border-white/5">
+                                <img src="https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=400"
+                                    class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-800 text-lg text-[#F8F7F4]">Fondant Chocolat</p>
+                                <p class="text-xs text-[#F8F7F4] font-bold uppercase tracking-widest">76 commandes</p>
+                            </div>
+                            <div
+                                class="size-10 bg-white/5 text-[#F8F7F4] rounded-full flex items-center justify-center font-900 text-sm">
+                                3</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Peak Hours -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-800 text-[#F8F7F4]">Heures de pointe</h3>
+                        <span class="text-[#7C3AED] font-bold text-[10px] tracking-widest uppercase">INTENSITÉ
+                            hebdomadaire</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="peak-hour-chip p-4 rounded-2xl text-center border-white/5">
+                            <p class="text-[9px] font-bold text-[#F8F7F4] uppercase mb-1">12h - 14h</p>
+                            <p class="font-800 text-sm text-[#F8F7F4]">Modéré</p>
+                        </div>
+                        <div
+                            class="peak-hour-chip high p-4 rounded-2xl text-center border-2 border-[#7C3AED]/40 shadow-inner">
+                            <p class="text-[9px] font-bold text-[#F8F7F4]/60 uppercase mb-1">19h - 21h</p>
+                            <p class="font-900 text-sm text-[#F8F7F4]">Critique</p>
+                        </div>
+                        <div class="peak-hour-chip high p-4 rounded-2xl text-center border-2 border-[#7C3AED]/40">
+                            <p class="text-[9px] font-bold text-[#F8F7F4]/60 uppercase mb-1">21h - 23h</p>
+                            <p class="font-900 text-sm text-[#F8F7F4]">Élevé</p>
+                        </div>
+                        <div class="peak-hour-chip p-4 rounded-2xl text-center border-white/5">
+                            <p class="text-[9px] font-bold text-[#F8F7F4] uppercase mb-1">Pause</p>
+                            <p class="font-800 text-sm text-[#F8F7F4]">Calme</p>
+                        </div>
+                    </div>
+                    <div class="mt-8 p-6 bg-indigo-500/10 rounded-[32px]">
+                        <p class="text-xs font-bold text-indigo-500 mb-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">lightbulb</span> Conseil VIBE
+                        </p>
+                        <p class="text-[11px] text-indigo-800/60 dark:text-indigo-200/40 font-bold leading-relaxed">
+                            Le vendredi soir entre 20h et 22h est votre créneau le plus rentable. Pensez à activer le
+                            statut "Vibrant" pour booster les ventes !
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RECRUITMENT SCREEN -->
+        <div id="screen-recruitment" class="screen px-4 pb-12 lg:px-0">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-12">
+                <div class="xl:col-span-2 bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-800 text-[#F8F7F4]">Candidatures Récentes</h3>
+                        <span class="text-[10px] font-bold text-[#F8F7F4] tracking-widest uppercase italic">À
+                            traiter</span>
+                    </div>
+                    <div id="applications-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Applications generated here -->
+                    </div>
+                </div>
+
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-800 text-[#F8F7F4]">Offres Actives</h3>
+                        <button onclick="openJobPopup()"
+                            class="size-10 bg-[#F8F7F4] text-black rounded-full flex items-center justify-center active:scale-95 transition-transform">
+                            <span class="material-symbols-outlined text-sm">add</span>
+                        </button>
+                    </div>
+                    <div id="job-offers-list" class="space-y-4">
+                        <!-- Job offers generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- SETTINGS SCREEN -->
+        <div id="screen-settings" class="screen px-4 pb-12 lg:px-0">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Restaurant Info -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <h3 class="text-xl font-800 text-[#F8F7F4] mb-8">Infos de l'établissement</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <label
+                                class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Nom
+                                du restaurant</label>
+                            <input type="text" value="L'Art de Vivre"
+                                class="w-full bg-white/5 text-[#F8F7F4] rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED]">
+                        </div>
+                        <div>
+                            <label
+                                class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Adresse</label>
+                            <input type="text" value="12 Rue du Faubourg, 75008 Paris"
+                                class="w-full bg-white/5 text-[#F8F7F4] rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED]">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-1 px-4">Ouverture</label>
+                                <input type="time" value="11:30"
+                                    class="w-full bg-white/5 text-[#F8F7F4] rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED]">
+                            </div>
+                            <div>
+                                <label
+                                    class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-1 px-4">Fermeture</label>
+                                <input type="time" value="23:30"
+                                    class="w-full bg-white/5 text-[#F8F7F4] rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED]">
+                            </div>
+                        </div>
+                        <button onclick="showToast('Infos mises à jour ! ✨')"
+                            class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform mt-4">Sauvegarder</button>
+                    </div>
+                </div>
+
+                <!-- Special Hours -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <h3 class="text-xl font-800 text-[#F8F7F4] mb-8">Horaires Spéciaux</h3>
+                    <div class="space-y-4">
+                        <div class="p-6 bg-white/5 rounded-3xl flex justify-between items-center border border-white/5">
+                            <div>
+                                <p class="font-800 text-[#F8F7F4]">Happy Hour</p>
+                                <p class="text-[10px] text-[#F8F7F4] font-bold uppercase tracking-widest">Tous les jours
+                                    • 18h - 20h</p>
+                            </div>
+                            <span class="material-symbols-outlined text-[#F8F7F4]">edit</span>
+                        </div>
+                        <button
+                            class="w-full border-2 border-dashed border-white/10 text-[#F8F7F4] font-800 py-6 rounded-3xl hover:border-[#7C3AED] hover:text-[#7C3AED] transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">add_circle</span> Ajouter un événement
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notifications -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <h3 class="text-xl font-800 text-[#F8F7F4] mb-8">Notifications</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-800 text-[#F8F7F4]">Alertes Nouveaux Avis</p>
+                                <p class="text-[10px] text-[#F8F7F4] font-bold uppercase">Push & Email</p>
+                            </div>
+                            <div onclick="this.classList.toggle('bg-zinc-700'); this.classList.toggle('bg-[#7C3AED]'); this.children[0].classList.toggle('right-1'); this.children[0].classList.toggle('left-1');"
+                                class="w-12 h-6 bg-[#7C3AED] rounded-full relative cursor-pointer shadow-inner transition-colors">
+                                <div class="absolute right-1 top-1 size-4 bg-white rounded-full transition-all"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-800 text-[#F8F7F4]">Nouvelles Candidatures</p>
+                                <p class="text-[10px] text-[#F8F7F4] font-bold uppercase">Notifications Temps Réel</p>
+                            </div>
+                            <div onclick="this.classList.toggle('bg-zinc-700'); this.classList.toggle('bg-[#7C3AED]'); this.children[0].classList.toggle('right-1'); this.children[0].classList.toggle('left-1');"
+                                class="w-12 h-6 bg-[#7C3AED] rounded-full relative cursor-pointer shadow-inner transition-colors">
+                                <div class="absolute right-1 top-1 size-4 bg-white rounded-full transition-all"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subscription -->
+                <div class="bg-zinc-900 p-10 rounded-[48px] card-shadow">
+                    <h3 class="text-xl font-800 text-[#F8F7F4] mb-8">Mon abonnement VIBE</h3>
+                    <div class="p-6 bg-indigo-500/10 rounded-3xl border border-indigo-500/20 mb-8">
+                        <p class="text-xs text-indigo-400 font-bold uppercase tracking-widest mb-1">Plan Actuel</p>
+                        <div class="flex justify-between items-end">
+                            <h4 class="text-2xl font-900 text-[#F8F7F4]">VIBE Premium ✨</h4>
+                            <p class="text-xs text-[#F8F7F4]">49€ / mois</p>
+                        </div>
+                    </div>
+                    <button
+                        class="w-full bg-[#F8F7F4] text-black font-800 py-4 rounded-3xl active:scale-95 transition-transform">Gérer
+                        mon abonnement</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MOBILE NAV -->
+    <nav class="mobile-nav">
+        <div onclick="navTo('home')" class="nav-mobile-item text-[#7C3AED]" id="mob-nav-home"><span
+                class="material-symbols-outlined fill-1">dashboard</span></div>
+        <div onclick="navTo('menu')" class="nav-mobile-item text-[#F8F7F4]" id="mob-nav-menu"><span
+                class="material-symbols-outlined">restaurant_menu</span></div>
+        <div onclick="navTo('stats')" class="nav-mobile-item text-[#F8F7F4]" id="mob-nav-stats"><span
+                class="material-symbols-outlined">insights</span></div>
+        <div class="nav-mobile-item text-[#F8F7F4]" id="mob-nav-recruitment" onclick="navTo('recruitment')"><span
+                class="material-symbols-outlined">badge</span></div>
+        <div class="nav-mobile-item text-[#F8F7F4]" id="mob-nav-settings" onclick="navTo('settings')"><span
+                class="material-symbols-outlined">settings</span></div>
+    </nav>
+
+    <script>
+        let currentMenuCategory = 'Entrées';
+
+        const menuItems = [
+            { id: 101, category: "Entrées", name: "Burrata Crémeuse", price: 12.00, desc: "Pesto de basilic frais, pignons toastés.", allergens: ["Lactose"], img: "https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=400", outOfStock: false },
+            { id: 102, category: "Entrées", name: "Carpaccio de Bœuf", price: 14.50, desc: "Parmesan 24 mois, roquette sauvage.", allergens: ["Lactose"], img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400", outOfStock: false },
+            { id: 201, category: "Plats", name: "Saumon Grillé", price: 24.00, desc: "Écrasé de pommes de terre aux herbes.", allergens: ["Poisson"], img: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400", outOfStock: false },
+            { id: 301, category: "Desserts", name: "Fondant Chocolat", price: 9.00, desc: "Cœur coulant noir, glace vanille.", allergens: ["Lactose", "Gluten"], img: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=400", outOfStock: false },
+            { id: 401, category: "Boissons", name: "Cocktail VIBE", price: 12.00, desc: "Gin, fleur de sureau, concombre.", allergens: [], img: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400", outOfStock: false },
+        ];
+
+        let jobOffers = [
+            { id: 1, title: "Chef de Rang", status: "Active", count: 12 },
+            { id: 2, title: "Commis de Cuisine", status: "Active", count: 8 },
+            { id: 3, title: "Barman Mixologue", status: "Paused", count: 5 }
+        ];
+
+        const applications = [
+            { name: "Sonia Martin", role: "Chef de Rang", exp: "5 ans", img: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?w=100" },
+            { name: "Marc Lefebvre", role: "Barman", exp: "2 ans", img: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=100" },
+            { name: "Julie Durand", role: "Commis", exp: "Débutant", img: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?w=100" },
+            { name: "Thomas Morel", role: "Chef de Rang", exp: "3 ans", img: "https://images.pexels.com/photos/91227/pexels-photo-91227.jpeg?w=100" }
+        ];
+
+        function setStatus(status) {
+            document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('status-' + status).classList.add('active');
+
+            let message = "";
+            if (status === 'available') message = "Votre établissement est désormais affiché comme Disponible ✅";
+            if (status === 'vibrant') message = "Statut mis à jour : L'ambiance est Animée 🔥";
+            if (status === 'full') message = "Statut mis à jour : Complet 🛑";
+
+            showToast(message);
+        }
+
+        function navTo(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + screenId).classList.add('active');
+
+            // Update Header
+            const headerTitle = document.getElementById('header-title');
+            const headerSubtitle = document.getElementById('header-subtitle');
+            const mobHeaderTitle = document.getElementById('mob-header-title');
+            const mobHeaderSubtitle = document.getElementById('mob-header-subtitle');
+
+            const setTitle = (title, subtitle) => {
+                headerTitle.textContent = title;
+                headerSubtitle.textContent = subtitle;
+                if (mobHeaderTitle) mobHeaderTitle.textContent = title;
+                if (mobHeaderSubtitle) mobHeaderSubtitle.textContent = subtitle;
+            };
+
+            if (screenId === 'home') {
+                setTitle("Bonjour, l'Art de Vivre 👋", "TABLEAU DE BORD");
+            } else if (screenId === 'menu') {
+                setTitle("Gestion de la Carte", "MENU MANAGEMENT");
+                renderMenuItems();
+            } else if (screenId === 'stats') {
+                setTitle("Analyses de l'établissement", "PERFORMANCES & STATS");
+                renderStats();
+            } else if (screenId === 'recruitment') {
+                setTitle("Recrutement & Candidats", "TALENT ACQUISITION");
+                renderRecruitment();
+            } else if (screenId === 'settings') {
+                setTitle("Paramètres du Compte", "CONFIGURATION");
+            }
+
+            // Update Nav Items active state
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + screenId);
+            if (activeNav) activeNav.classList.add('active');
+
+            // Mobile Nav
+            document.querySelectorAll('.nav-mobile-item').forEach(item => {
+                item.classList.remove('text-[#7C3AED]');
+                item.classList.add('text-[#F8F7F4]');
+            });
+            const activeMobNav = document.getElementById('mob-nav-' + screenId);
+            if (activeMobNav) {
+                activeMobNav.classList.remove('text-[#F8F7F4]');
+                activeMobNav.classList.add('text-[#7C3AED]');
+            }
+        }
+
+        function filterMenu(cat) {
+            currentMenuCategory = cat;
+            document.querySelectorAll('.cat-filter').forEach(btn => {
+                btn.classList.remove('active', 'bg-[#7C3AED]', 'text-white', 'shadow-lg', 'shadow-indigo-500/20');
+                btn.classList.add('bg-white', 'dark:bg-zinc-900', 'text-[#F8F7F4]');
+            });
+            event.currentTarget.classList.add('active', 'bg-[#7C3AED]', 'text-white', 'shadow-lg', 'shadow-indigo-500/20');
+            event.currentTarget.classList.remove('text-[#F8F7F4]');
+            renderMenuItems();
+        }
+
+        function renderMenuItems() {
+            const grid = document.getElementById('menu-items-grid');
+            const filtered = menuItems.filter(item => item.category === currentMenuCategory);
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="bg-zinc-900 rounded-[40px] overflow-hidden card-shadow p-6 ${item.outOfStock ? 'item-out-of-stock' : ''}">
+                    <div class="size-24 rounded-3xl overflow-hidden mb-6 mx-auto shadow-md">
+                        <img src="${item.img}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="text-center mb-6">
+                        <h4 class="text-xl font-800 tracking-tight mb-1">${item.name}</h4>
+                        <p class="text-[#7C3AED] font-900 text-lg mb-2">${item.price.toFixed(2)}€</p>
+                        <p class="text-xs text-[#F8F7F4] font-medium px-4 line-clamp-2">${item.desc}</p>
+                    </div>
+                    
+                    <div class="flex flex-wrap justify-center gap-2 mb-6">
+                        ${item.allergens.map(a => `<span class="px-3 py-1 bg-rose-500/10 text-rose-500 text-[10px] font-bold rounded-full dark:bg-rose-500/10">${a}</span>`).join('')}
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="toggleStock(${item.id})" class="flex-1 py-3 px-4 rounded-2xl bg-zinc-800 text-[10px] font-bold uppercase tracking-wider hover:bg-white/10 dark:hover:bg-zinc-700 transition-colors">
+                            ${item.outOfStock ? 'Réactiver' : 'Rupture'}
+                        </button>
+                        <button onclick="openEditPopup(${item.id})" class="flex-1 py-3 px-4 rounded-2xl bg-indigo-500/10 text-indigo-500 text-[10px] font-bold uppercase tracking-wider dark:bg-indigo-500/10 hover:bg-indigo-100 transition-colors">
+                            Modifier
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleStock(id) {
+            const item = menuItems.find(i => i.id === id);
+            if (item) {
+                item.outOfStock = !item.outOfStock;
+                renderMenuItems();
+                showToast(item.outOfStock ? "Plat passé en rupture de stock 🛑" : "Plat de nouveau disponible ✅");
+            }
+        }
+
+        function openEditPopup(id) {
+            const item = menuItems.find(i => i.id === id);
+            if (!item) return;
+
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <h2 class="text-2xl font-800 tracking-tight mb-8">Modifier le plat</h2>
+                <div class="space-y-4 text-left mb-8">
+                    <div>
+                        <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Nom</label>
+                        <input type="text" id="edit-name" value="${item.name}" class="w-full bg-zinc-800 rounded-2xl p-4 font-bold focus:ring-2 ring-[#7C3AED] outline-none">
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Prix (€)</label>
+                            <input type="number" step="0.5" id="edit-price" value="${item.price}" class="w-full bg-zinc-800 rounded-2xl p-4 font-bold focus:ring-2 ring-[#7C3AED] outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Description</label>
+                        <textarea id="edit-desc" class="w-full bg-zinc-800 rounded-2xl p-4 font-bold focus:ring-2 ring-[#7C3AED] outline-none h-24">${item.desc}</textarea>
+                    </div>
+                </div>
+                <button onclick="saveEdit(${item.id})" class="w-full bg-[#7C3AED] text-white font-800 py-4 rounded-3xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform">Enregistrer</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function saveEdit(id) {
+            const item = menuItems.find(i => i.id === id);
+            if (item) {
+                item.name = document.getElementById('edit-name').value;
+                item.price = parseFloat(document.getElementById('edit-price').value);
+                item.desc = document.getElementById('edit-desc').value;
+                renderMenuItems();
+                closePopup();
+                showToast("Modifications enregistrées ! ✨");
+            }
+        }
+
+        function openAddPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <h2 class="text-2xl font-800 tracking-tight mb-8">Ajouter un plat</h2>
+                <div class="space-y-4 text-left mb-8">
+                    <div>
+                        <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Nom</label>
+                        <input type="text" id="add-name" placeholder="Ex: Risotto Truffe" class="w-full bg-zinc-800 rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED]">
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Prix (€)</label>
+                            <input type="number" step="0.5" id="add-price" placeholder="18.00" class="w-full bg-zinc-800 rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED]">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Description</label>
+                        <textarea id="add-desc" placeholder="Courte description..." class="w-full bg-zinc-800 rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED] h-24"></textarea>
+                    </div>
+                </div>
+                <button onclick="addNewItem()" class="w-full bg-black text-white dark:bg-white dark:text-black font-800 py-4 rounded-3xl active:scale-95 transition-transform">Ajouter à la carte</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function addNewItem() {
+            const newItem = {
+                id: Date.now(),
+                category: currentMenuCategory,
+                name: document.getElementById('add-name').value,
+                price: parseFloat(document.getElementById('add-price').value || 0),
+                desc: document.getElementById('add-desc').value,
+                allergens: [],
+                img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400",
+                outOfStock: false
+            };
+            menuItems.push(newItem);
+            renderMenuItems();
+            closePopup();
+            showToast("Plat ajouté avec succès ! 👨‍🍳");
+        }
+
+        function closePopup() {
+            document.getElementById('generic-popup').style.display = 'none';
+        }
+
+        function renderStats() {
+            const viewsGrid = document.getElementById('views-chart');
+            const ordersGrid = document.getElementById('orders-chart');
+
+            // Mock dynamic heights
+            const viewsData = [65, 45, 80, 55, 95, 75, 40];
+            const ordersData = [30, 20, 50, 25, 85, 45, 15];
+
+            viewsGrid.innerHTML = viewsData.map(h => `
+                <div class="flex-1 bg-white/5 rounded-2xl overflow-hidden relative group h-full cursor-pointer">
+                    <div class="chart-bar absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#7C3AED] to-[#D946EF]" style="height: 0%"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <span class="bg-[#F8F7F4] text-black text-[9px] px-2 py-1 rounded-lg font-bold shadow-xl">${Math.round(h * 15)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            ordersGrid.innerHTML = ordersData.map(h => `
+                <div class="flex-1 bg-white/5 rounded-2xl overflow-hidden relative group h-full cursor-pointer">
+                    <div class="chart-bar absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#D946EF] to-[#7C3AED]" style="height: 0%"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <span class="bg-[#F8F7F4] text-black text-[9px] px-2 py-1 rounded-lg font-bold shadow-xl">${Math.round(h * 0.4)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Trigger animation
+            setTimeout(() => {
+                const viewsBars = viewsGrid.querySelectorAll('.chart-bar');
+                viewsBars.forEach((bar, i) => bar.style.height = viewsData[i] + '%');
+
+                const ordersBars = ordersGrid.querySelectorAll('.chart-bar');
+                ordersBars.forEach((bar, i) => bar.style.height = ordersData[i] + '%');
+            }, 100);
+        }
+
+        function showToast(msg) {
+            // Simplified toast using alert for prototype, but with custom styling later if needed
+            const toast = document.createElement('div');
+            toast.className = "fixed top-8 left-1/2 -translate-x-1/2 bg-black text-white dark:bg-white dark:text-black px-8 py-4 rounded-3xl font-800 text-sm z-[1000] animate-in slide-in-from-top duration-500 shadow-2xl";
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('animate-out', 'fade-out', 'slide-out-to-top');
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+
+        function renderRecruitment() {
+            const appGrid = document.getElementById('applications-grid');
+            const jobList = document.getElementById('job-offers-list');
+
+            appGrid.innerHTML = applications.map(app => `
+                <div class="p-6 bg-zinc-800 rounded-3xl flex gap-4 items-center group hover:scale-[1.02] transition-transform cursor-pointer">
+                    <div class="size-14 rounded-2xl overflow-hidden shadow-sm">
+                        <img src="${app.img}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-800 text-sm text-[#F8F7F4] dark:text-[#F8F7F4]">${app.name}</p>
+                        <p class="text-[10px] text-[#F8F7F4] font-bold uppercase tracking-wider">${app.role} • ${app.exp}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-[#F8F7F4] opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+                </div>
+            `).join('');
+
+            jobList.innerHTML = jobOffers.map(job => `
+                <div class="flex items-center justify-between p-4 bg-zinc-800 rounded-2xl">
+                    <div>
+                        <p class="font-800 text-sm text-[#F8F7F4] dark:text-[#F8F7F4]">${job.title}</p>
+                        <p class="text-[9px] font-bold ${job.status === 'Active' ? 'text-emerald-500' : 'text-rose-500'} uppercase tracking-widest">${job.status} • ${job.count} candidats</p>
+                    </div>
+                    <button onclick="toggleJobStatus(${job.id})" class="size-8 bg-zinc-200 dark:bg-zinc-700 rounded-full flex items-center justify-center hover:bg-[#7C3AED] hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-sm">${job.status === 'Active' ? 'pause' : 'play_arrow'}</span>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function toggleJobStatus(id) {
+            const job = jobOffers.find(j => j.id === id);
+            if (job) {
+                job.status = job.status === 'Active' ? 'Paused' : 'Active';
+                renderRecruitment();
+                showToast(`Statut de l'offre mis à jour : ${job.status}`);
+            }
+        }
+
+        function openJobPopup() {
+            const container = document.getElementById('popup-content-container');
+            container.innerHTML = `
+                <h2 class="text-2xl font-800 tracking-tight mb-8">Poster une annonce</h2>
+                <div class="space-y-4 text-left mb-8">
+                    <div>
+                        <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Poste</label>
+                        <input type="text" id="job-title" placeholder="Ex: Chef de Cuisine" class="w-full bg-zinc-800 rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED]">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#F8F7F4] uppercase tracking-widest block mb-2 px-4">Type de contrat</label>
+                        <select id="job-type" class="w-full bg-zinc-800 rounded-2xl p-4 font-bold outline-none focus:ring-2 ring-[#7C3AED] appearance-none">
+                            <option>CDI Temps Plein</option>
+                            <option>CDD</option>
+                            <option>Extra / Saisonnier</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="postJob()" class="w-full bg-black text-white dark:bg-white dark:text-black font-800 py-4 rounded-3xl active:scale-95 transition-transform">Publier l'annonce</button>
+            `;
+            document.getElementById('generic-popup').style.display = 'flex';
+        }
+
+        function postJob() {
+            const title = document.getElementById('job-title').value;
+            if (!title) return;
+
+            jobOffers.push({
+                id: Date.now(),
+                title: title,
+                status: 'Active',
+                count: 0
+            });
+            renderRecruitment();
+            closePopup();
+            showToast("Annonce publiée ! 🚀");
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const isHidden = menu.style.display === 'none' || menu.style.display === '';
+            menu.style.display = isHidden ? 'block' : 'none';
+        }
+    </script>
+</body>
+
+</html>
